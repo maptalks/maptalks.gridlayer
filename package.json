@@ -1,0 +1,39 @@
+{
+  "name": "maptalks.gridlayer",
+  "version": "0.1.0",
+  "description": "A GridLayer plugin for maptalks.js. A layer draws grids. ",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MapTalks/maptalks.gridlayer.js.git"
+  },
+  "main" : "maptalks.gridlayer.js",
+  "scripts": {
+    "lint": "eslint *.js test/**/*.js",
+    "test": "gulp test",
+    "pretest": "npm run lint"
+  },
+  "devDependencies": {
+    "eslint": "^2.4.0",
+    "eslint-config-maptalks": "^0.2.1",
+    "expect.js": "^0.3.1",
+    "gulp": "^3.9.0",
+    "gulp-coveralls": "^0.1.4",
+    "gulp-gzip": "^1.2.0",
+    "gulp-mocha": "^2.2.0",
+    "gulp-rename": "~1.2.2",
+    "gulp-uglify": "^1.5.1",
+    "karma": "^0.13.22",
+    "karma-chrome-launcher": "^1.0.1",
+    "karma-expect": "^1.1.2",
+    "karma-mocha": "^1.0.1",
+    "karma-phantomjs-launcher": "^1.0.0",
+    "minimist": "^1.2.0",
+    "mocha": "^2.4.5",
+    "phantomjs-prebuilt": "^2.1.7",
+    "sinon": "^1.14.1"
+  },
+  "dependencies": {
+    "maptalks": "^0.2.1"
+  }
+}
