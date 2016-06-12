@@ -213,15 +213,15 @@
                 }
             }
             var i;
-            for (i = cols[0]; i <= cols[1]; i++) {
+            for (i = cols[0]; i <= cols[1] + 1; i++) {
                 p1 = this._getCellNW(i, rows[0], gridInfo);
                 p2 = this._getCellNW(i, rows[1] + 1, gridInfo);
                 this._context.moveTo(p1[0], p1[1]);
                 this._context.lineTo(p2[0], p2[1]);
             }
-            for (i = rows[0]; i <= rows[1]; i++) {
+            for (i = rows[0]; i <= rows[1] + 1; i++) {
                 p1 = this._getCellNW(cols[0], i, gridInfo);
-                p2 = this._getCellNW(cols[1], i, gridInfo);
+                p2 = this._getCellNW(cols[1] + 1, i, gridInfo);
                 this._context.moveTo(p1[0], p1[1]);
                 this._context.lineTo(p2[0], p2[1]);
             }
@@ -269,7 +269,7 @@
         _getCellNW: function (col, row, gridInfo) {
             var grid = this._layer.getGrid();
             if (grid['projection']) {
-                return [gridInfo.center.x + col * gridInfo.width, gridInfo.center.y + row * gridInfo.height];
+                return [gridInfo.center.x + (col > 0 ? col - 1 : col) * gridInfo.width, gridInfo.center.y + (row > 0 ? row - 1 : row) * gridInfo.height];
             }
             return null;
         },
@@ -277,7 +277,7 @@
         _getCellCenter: function (col, row, gridInfo) {
             var grid = this._layer.getGrid();
             if (grid['projection']) {
-                return [gridInfo.center.x + (col + 1 / 2) * gridInfo.width, gridInfo.center.y + (row + 1 / 2) * gridInfo.height];
+                return [gridInfo.center.x + ((col > 0 ? col - 1 : col) + 1 / 2) * gridInfo.width, gridInfo.center.y + ((row > 0 ? row - 1 : row) + 1 / 2) * gridInfo.height];
             }
             return null;
         },
@@ -398,6 +398,7 @@
                 lineSymbol['polygonOpacity'] = 0;
                 line = new maptalks.LineString(coordinates, {
                     'symbol' : lineSymbol,
+                    'properties' : gridData[2]['properties'],
                     'debug' : this._layer.options['debug']
                 });
                 line._bindLayer(this._layer);
