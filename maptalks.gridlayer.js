@@ -74,7 +74,9 @@
         },
 
         redraw: function () {
-            this._getRenderer().render();
+            if (this._getRenderer()) {
+                this._getRenderer().redraw();
+            }
             return this;
         },
 
@@ -169,22 +171,70 @@
             this._layer = layer;
         },
 
-        _render: function () {
+        draw: function () {
             var grid = this._layer.getGrid();
             if (!grid) {
                 this._complete();
                 return;
             }
             this._prepareCanvas();
-            if (!this._compiledGridStyle) {
-                this._compiledGridStyle = maptalks.Util.loadFunctionTypes(this._layer.options['symbol'], maptalks.Util.bind(function () {
-                    return [this.getMap() ? this.getMap().getZoom() : null, null];
-                }, this));
-            }
             this._setCanvasStyle(this._compiledGridStyle);
             this._drawGrid();
             this._drawData();
             this._complete();
+        },
+
+        checkResources: function () {
+            this._compileStyles();
+            if (this._resources) {
+                return null;
+            }
+            var resources = [];
+            if (this._compiledGridStyle) {
+                resources = maptalks.Util.getExternalResources(this._compiledGridStyle);
+            }
+            if (this._compiledSymbols) {
+                this._compiledSymbols.forEach(function (s) {
+                    var c = maptalks.Util.getExternalResources(s);
+                    if (c) {
+                        resources = resources.concat(c);
+                    }
+                });
+            }
+            return resources;
+        },
+
+        redraw: function () {
+
+        },
+
+        _compileStyles: function () {
+            if (!this._compiledGridStyle) {
+                var symbol = maptalks.Util.convertResourceUrl(this._layer.options['symbol']);
+                this._compiledGridStyle = maptalks.Util.loadFunctionTypes(symbol, maptalks.Util.bind(function () {
+                    return [this.getMap() ? this.getMap().getZoom() : null, null];
+                }, this));
+            }
+            if (!this._compiledSymbols) {
+                var map = this.getMap(),
+                    grid = this._layer.getGrid(),
+                    data = grid['data'];
+                this._compiledSymbols = [];
+                if (data) {
+                    data.forEach(function (gridData, index) {
+                        if (!gridData[2]['symbol']) {
+                            return;
+                        }
+                        var argFn = (function (props) {
+                            return function () {
+                                return [map.getZoom(), props];
+                            };
+                        })(gridData[2]['properties']);
+                        var s = maptalks.Util.convertResourceUrl(gridData[2]['symbol']);
+                        this._compiledSymbols[index] = maptalks.Util.loadFunctionTypes(s, argFn);
+                    }, this);
+                }
+            }
         },
 
         _drawGrid: function () {
@@ -197,16 +247,16 @@
                 rows = gridInfo.rows,
                 cellW = gridInfo.width,
                 cellH = gridInfo.height,
-                p1, p2;
+                p1, p2,
+                p0 = this._getCellNW(cols[0], rows[0], gridInfo);
             this._context.beginPath();
-            if (cellW < 0.5 || cellH < 0.5 || this._compiledGridStyle['polygonOpacity'] > 0) {
-                p1 = this._getCellNW(cols[0], rows[0], gridInfo);
+            if (cellW < 0.5 || cellH < 0.5 || (this._compiledGridStyle['polygonOpacity'] > 0 || this._compiledGridStyle['polygonColor'] || this._compiledGridStyle['polygonPatternFile'])) {
                 p2 = this._getCellNW(cols[1] + 1, rows[1] + 1, gridInfo);
-                this._context.rect(p1.x, p2.y, p2.x - p1.x, p2.y - p1.y);
+                this._context.rect(p0[0], p0[1], p2[0] - p0[0], p2[1] - p0[1]);
                 if (this._compiledGridStyle['polygonOpacity'] > 0) {
-                    maptalks.Canvas.fillCanvas(this._context, this._compiledGridStyle['polygonOpacity']);
+                    maptalks.Canvas.fillCanvas(this._context, this._compiledGridStyle['polygonOpacity'], p0[0], p0[1]);
                 } else {
-                    this._context.fill();
+                    maptalks.Canvas.fillCanvas(this._context, 1, p0[0], p0[1]);
                 }
                 if (cellW < 0.5 || cellH < 0.5) {
                     return;
@@ -225,7 +275,7 @@
                 this._context.moveTo(p1[0], p1[1]);
                 this._context.lineTo(p2[0], p2[1]);
             }
-            maptalks.Canvas._stroke(this._context, this._compiledGridStyle['lineOpacity']);
+            maptalks.Canvas._stroke(this._context, this._compiledGridStyle['lineOpacity'], p0[0], p0[1]);
         },
 
         _getProjGridToDraw: function () {
@@ -269,7 +319,10 @@
         _getCellNW: function (col, row, gridInfo) {
             var grid = this._layer.getGrid();
             if (grid['projection']) {
-                return [gridInfo.center.x + (col > 0 ? col - 1 : col) * gridInfo.width, gridInfo.center.y + (row > 0 ? row - 1 : row) * gridInfo.height];
+                return [
+                    gridInfo.center.x + (col > 0 ? col - 1 : col) * gridInfo.width,
+                    gridInfo.center.y + (row > 0 ? row - 1 : row) * gridInfo.height
+                ];
             }
             return null;
         },
@@ -277,7 +330,10 @@
         _getCellCenter: function (col, row, gridInfo) {
             var grid = this._layer.getGrid();
             if (grid['projection']) {
-                return [gridInfo.center.x + ((col > 0 ? col - 1 : col) + 1 / 2) * gridInfo.width, gridInfo.center.y + ((row > 0 ? row - 1 : row) + 1 / 2) * gridInfo.height];
+                return [
+                    gridInfo.center.x + ((col > 0 ? col - 1 : col) + 1 / 2) * gridInfo.width,
+                    gridInfo.center.y + ((row > 0 ? row - 1 : row) + 1 / 2) * gridInfo.height
+                ];
             }
             return null;
         },
@@ -285,13 +341,9 @@
         _drawData: function () {
             var grid = this._layer.getGrid(),
                 gridInfo = grid['projection'] ? this._getProjGridToDraw() : this._getGridToDraw(),
-                data = this._layer.getGrid()['data'];
+                data = grid['data'];
             if (!Array.isArray(data) || !data.length) {
                 return;
-            }
-            var map = this.getMap();
-            if (!this._compiledSymbols) {
-                this._compiledSymbols = [];
             }
             if (!this._gridSymbolTests) {
                 this._gridSymbolTests = [];
@@ -300,17 +352,7 @@
                 if (!gridData[2]['symbol']) {
                     return;
                 }
-                var symbol = this._compiledSymbols[index];
-                if (!symbol) {
-                    var argFn = (function (props) {
-                        return function () {
-                            return [map.getZoom(), props];
-                        };
-                    })(gridData[2]['properties']);
-                    symbol = maptalks.Util.loadFunctionTypes(gridData[2]['symbol'], argFn);
-                    this._compiledSymbols[index] = symbol;
-                }
-                this._drawDataGrid(gridData, symbol, gridInfo);
+                this._drawDataGrid(gridData, this._compiledSymbols[index], gridInfo);
                 if (maptalks.Util.isNil(this._gridSymbolTests[index])) {
                     this._gridSymbolTests[index] = this._testSymbol(gridData[2]['symbol']);
                 }
@@ -327,7 +369,8 @@
             var painted = false;
             var cols = Array.isArray(gridData[0]) ? gridData[0] : [gridData[0], gridData[0]],
                 rows = Array.isArray(gridData[1]) ? gridData[1] : [gridData[1], gridData[1]],
-                i, ii, p1, p2, gridExtent;
+                i, ii, p1, p2, gridExtent,
+                p0 = this._getCellNW(cols[0], rows[0], gridInfo);
             for (i = cols[0]; i <= cols[1]; i++) {
                 for (ii = rows[0]; ii <= rows[1]; ii++) {
                     p1 = this._getCellNW(i, ii, gridInfo);
@@ -345,7 +388,7 @@
                 }
             }
             if (painted) {
-                maptalks.Canvas.fillCanvas(this._context, symbol['polygonOpacity']);
+                maptalks.Canvas.fillCanvas(this._context, symbol['polygonOpacity'], p0[0], p0[1]);
             }
         },
 
@@ -411,7 +454,13 @@
 
         _setCanvasStyle : function (symbol) {
             var extend = maptalks.Util.extend({}, defaultSymbol, symbol);
-            maptalks.Canvas.prepareCanvas(this._context, extend);
+            maptalks.Canvas.prepareCanvas(this._context, extend, this._resources);
+        },
+
+        _onRemove: function () {
+            delete this._compiledGridStyle;
+            delete this._compiledSymbols;
+            delete this._gridSymbolTests;
         }
 
     });
