@@ -174,14 +174,14 @@
         draw: function () {
             var grid = this._layer.getGrid();
             if (!grid) {
-                this._complete();
+                this.completeRender();
                 return;
             }
-            this._prepareCanvas();
+            this.prepareCanvas();
             this._setCanvasStyle(this._compiledGridStyle);
             this._drawGrid();
             this._drawData();
-            this._complete();
+            this.completeRender();
         },
 
         checkResources: function () {
@@ -457,7 +457,7 @@
             maptalks.Canvas.prepareCanvas(this._context, extend, this._resources);
         },
 
-        _onRemove: function () {
+        onRemove: function () {
             delete this._compiledGridStyle;
             delete this._compiledSymbols;
             delete this._gridSymbolTests;
