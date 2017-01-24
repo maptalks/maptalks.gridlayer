@@ -116,7 +116,7 @@ var GridLayer = function (_maptalks$Layer) {
                 cellH = grid.height / res;
             var gridCenter = map.coordinateToContainerPoint(new maptalks.Coordinate(grid['center'])),
                 point = map.coordinateToContainerPoint(coordinate);
-            var extent = new maptalks.Extent(cols[0] === '*' ? -Number.MAX_VALUE : gridCenter + cols[0] * cellW, rows[0] === '*' ? -Number.MAX_VALUE : gridCenter + rows[0] * cellH, cols[1] === '*' ? Number.MAX_VALUE : gridCenter + cols[1] * cellW, rows[1] === '*' ? Number.MAX_VALUE : gridCenter + rows[1] * cellH);
+            var extent = new maptalks.Extent(cols[0] === '*' ? -Number.MAX_VALUE : gridCenter.x + cols[0] * cellW, rows[0] === '*' ? -Number.MAX_VALUE : gridCenter.y + rows[0] * cellH, cols[1] === '*' ? Number.MAX_VALUE : gridCenter.x + cols[1] * cellW, rows[1] === '*' ? Number.MAX_VALUE : gridCenter.y + rows[1] * cellH);
             if (!extent.contains(point)) {
                 return null;
             }
