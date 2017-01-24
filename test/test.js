@@ -1,4 +1,4 @@
-describe('GridLayer', function () {
+describe('D3Layer', function () {
     var container, map;
     beforeEach(function () {
         container = document.createElement('div');
@@ -12,34 +12,16 @@ describe('GridLayer', function () {
     });
 
     afterEach(function () {
+        map.remove();
         maptalks.DomUtil.removeDomNode(container);
     });
 
-    it('add to map', function (done) {
-        var layer = new maptalks.GridLayer('g', {
-            projection : true,
-            center : map.getCenter(),
-            width : 100,
-            height : 100,
-            cols : [-5, 5],
-            rows : [-5, 5]
-        });
-        layer.on('layerload', function () {
-            expect(layer).to.be.painted();
-            done();
-        })
-         .addTo(map);
+    it('should display when added to map', function (done) {
+        done();
     });
 
-    it('add again', function (done) {
-        var layer = new maptalks.GridLayer('g', {
-            projection : true,
-            center : map.getCenter(),
-            width : 100,
-            height : 100,
-            cols : [-5, 5],
-            rows : [-5, 5]
-        });
+    /*it('should display if added again after removed', function (done) {
+        var layer = new maptalks.E3Layer('g', getE3Option());
         layer.once('layerload', function () {
             expect(layer).to.be.painted();
             map.removeLayer(layer);
@@ -52,58 +34,80 @@ describe('GridLayer', function () {
         map.addLayer(layer);
     });
 
-    it('with a symbol', function (done) {
-        var symbol = {
-            'lineColor' : '#000',
-            'lineOpacity' : 1,
-            'polygonFill' : 'rgb(0, 0, 0)',
-            'polygonOpacity' : 0.4
-        };
-        var layer = new maptalks.GridLayer('g', {
-            projection : true,
-            center : map.getCenter(),
-            width : 100,
-            height : 100,
-            cols : [-5, 5],
-            rows : [-5, 5]
-        }, {
-            'symbol' : symbol
+    it('should display after zooming', function (done) {
+        var layer = new maptalks.E3Layer('g', getE3Option());
+        layer.once('layerload', function () {
+            map.on('zoomend', function () {
+                expect(layer).to.be.painted();
+                done();
+            });
+            map.zoomIn();
         });
-        layer.on('layerload', function () {
+        map.addLayer(layer);
+    });
+
+
+    it('should show', function (done) {
+        var layer = new maptalks.E3Layer('g', getE3Option(), { visible : false });
+        layer.once('layerload', function () {
+            expect(layer).not.to.be.painted();
+            layer.once('layerload', function () {
+                expect(layer).to.be.painted();
+                done();
+            });
+            layer.show();
+        });
+        map.addLayer(layer);
+    });
+
+    it('should hide', function (done) {
+        var layer = new maptalks.E3Layer('g', getE3Option());
+        layer.once('layerload', function () {
             expect(layer).to.be.painted();
+            layer.once('hide', function () {
+                expect(layer).not.to.be.painted();
+                done();
+            });
+            layer.hide();
+        });
+        map.addLayer(layer);
+    });
+
+    it('should serialized with JSON', function (done) {
+        var layer = new maptalks.E3Layer('g', getE3Option());
+        var json = layer.toJSON();
+        var copy = maptalks.Layer.fromJSON(json);
+        expect(data).to.be.eql(copy.getData());
+        copy.on('layerload', function () {
+            expect(copy).to.be.painted();
             done();
         })
         .addTo(map);
     });
 
-    describe('test layer with data', function () {
-        function testLayerWithData(done, data) {
-            var layer = new maptalks.GridLayer('g', {
-                projection : true,
-                center : map.getCenter(),
-                width : 100,
-                height : 100,
-                cols : [-5, 5],
-                rows : [-5, 5],
-                data : data
-            });
-            layer.on('layerload', function () {
+    it('should can add point', function (done) {
+        var layer = new maptalks.E3Layer('g');
+        layer.once('layerload', function () {
+            expect(layer).not.to.be.painted();
+            layer.once('layerload', function () {
                 expect(layer).to.be.painted();
                 done();
-            })
-            .addTo(map);
-        }
-
-        it('with data of text symbol', function (done) {
-            testLayerWithData(done, [
-                [
-                    [1, 2], 4, {'property' : {'foo':1}, 'symbol' : {
-                        'textName' : 'text',
-                        'textSize' : {type:'interval', stops: [[0, 0], [16, 5], [17, 10], [18, 20], [19, 40]]}
-                    }},
-                    [4, [2, 3], {'symbol' : {'textName' : 'text', 'textSize' : 14}}]
-                ]
-            ]);
-        });
+            });
+            layer.addPoint([0, 0, 1]);
+        })
+        .addTo(map);
     });
+
+    it('should can set data', function (done) {
+        var layer = new maptalks.E3Layer('g');
+        layer.once('layerload', function () {
+            expect(layer).not.to.be.painted();
+            layer.once('layerload', function () {
+                expect(layer).to.be.painted();
+                done();
+            });
+            layer.setData([[0, 0, 1]]);
+        })
+        .addTo(map);
+    });*/
 });

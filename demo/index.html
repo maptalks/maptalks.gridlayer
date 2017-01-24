@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>maptalks.animatelayer demo</title>
+    <script src="https://unpkg.com/maptalks@<2.0.0/dist/maptalks.min.js"></script>
+    <script src="../dist/maptalks.gridlayer.js"></script>
+    <script src="metrics.js"></script>
+    <script src="colors.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://unpkg.com/maptalks@<2.0.0/dist/maptalks.css">
+    <style>
+        #map { width: 1100px; height: 800px; }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+    var map = new maptalks.Map("map",{
+        center:      [175.46873, -37.90258],
+        zoom:  16,
+        hitDetect : false,
+        baseLayer : new maptalks.TileLayer("tile",{
+            urlTemplate : 'http://{s}.tile.thunderforest.com/transport/{z}/{x}/{y}.png',
+            subdomains:['a','b','c']
+        })
+    });
+    var data = [];
+    for (var i = -150; i < 150; i++ ){
+        for (var ii = -150; ii < 150; ii++) {
+            data.push([i, ii, { symbol: getSymbol(i, ii)}]);
+        }
+    }
+
+    var grid = new maptalks.GridLayer('grid',{
+        projection : true,
+        center : map.getCenter(),
+        width : 100,
+        height : 100,
+        data : data/*[
+            [[2, 4], 5, { symbol : symbol }],
+            [1, 5, { symbol : symbol }],
+            [-5, [8, 10], { symbol : symbol }]
+        ]*/
+    })/*.setMask(new maptalks.Circle(map.getCenter(), 300))*/.addTo(map);
+    var r = new maptalks.VectorLayer('r').addTo(map);
+    map.on('click', function(param) {
+        r.clear().addGeometry(grid.identify(param.coordinate));
+    })
+
+    function getSymbol(col, row) {
+        var len = colors.length;
+        // var index = Math.abs(col) + Math.abs(row);
+        // var color = sortedColors[index >= sortedColors.length ? sortedColors.length - 1 : index];
+        var color = colors[Math.round(Math.random() * (len - 1))];
+        return symbol = {
+            // 'textName' : '0',
+            // 'textSize' : { stops: [[10, 2], [15, 10]]},
+            lineColor : '#000',
+            lineOpacity : 1,
+            polygonFill : 'rgb(' + color.join() + ')',
+            polygonOpacity : 0.4
+        }
+    }
+
+
+</script>
+</body>
+</html>

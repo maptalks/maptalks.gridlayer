@@ -1,5 +1,5 @@
-# maptalks.gridlayer.js
+# maptalks.gridlayer
 
-[![CircleCI](https://circleci.com/gh/MapTalks/maptalks.gridlayer.js.svg?style=svg)](https://circleci.com/gh/MapTalks/maptalks.gridlayer.js)
+[![CircleCI](https://circleci.com/gh/maptalks/maptalks.gridlayer.svg?style=shield)](https://circleci.com/gh/maptalks/maptalks.gridlayer)
 
-A GridLayer plugin for maptalks.js. A layer draws grids.
+GridLayer plugin for maptalks.js. A layer draws grids.

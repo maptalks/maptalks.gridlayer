@@ -1,14 +1,16 @@
 {
+  "root": true,
+  "env": {
+    "browser": true,
+    "es6": true
+  },
+  "parser": "babel-eslint",
+  "parserOptions": {
+    "sourceType": "module"
+  },
   "extends": "maptalks",
   "globals": {
-      "beforeEach" : true,
-      "afterEach" : true,
-      "describe":true,
-      "it":true,
-      "expect":true
   },
   "rules": {
-    "strict" : 0,
-    "global-require" : 0
   }
 }

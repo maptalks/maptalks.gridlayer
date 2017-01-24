@@ -1,43 +1,34 @@
-'use strict';
+const gulp = require('gulp'),
+    pkg = require('./package.json'),
+    BundleHelper = require('maptalks-build-helpers').BundleHelper,
+    TestHelper = require('maptalks-build-helpers').TestHelper;
+const bundleHelper = new BundleHelper(pkg);
+const testHelper = new TestHelper();
+const karmaConfig = require('./karma.config');
 
-var path   = require('path'),
-    gulp   = require('gulp'),
-    gzip   = require('gulp-gzip'),
-    rename = require('gulp-rename'),
-    uglify = require('gulp-uglify'),
-    // mocha  = require('gulp-mocha'),
-    Server = require('karma').Server;
-
-var mainjs = './maptalks.gridlayer.js';
-
-gulp.task('scripts', function () {
-    return gulp.src(mainjs)
-      .pipe(rename({suffix: '.min'}))
-      .pipe(uglify())
-      .pipe(gulp.dest('./'))
-      .pipe(gzip())
-      .pipe(gulp.dest('./'));
+gulp.task('build', () => {
+    const rollupConfig = bundleHelper.getDefaultRollupConfig();
+    rollupConfig['sourceMap'] = false;
+    return bundleHelper.bundle('index.js', rollupConfig);
 });
 
-gulp.task('watch', ['test'], function () {
-    gulp.watch(['src/**/*.js', 'test/**/*.js', './gulpfile.js'], ['test']);
+gulp.task('minify', ['build'], () => {
+    bundleHelper.minify();
 });
 
-var karmaConfig = {
-    configFile: path.join(__dirname, '/karma.conf.js'),
-    browsers: ['PhantomJS'],
-    singleRun: false
-};
-
-gulp.task('test', [], function (done) {
-    // gulp.src(['./node_modules/maptalks/dist/maptalks.js', mainjs, 'test/*.js'], {read: false})
-    //     .pipe(mocha());
-    karmaConfig.singleRun = true;
-    new Server(karmaConfig, done).start();
+gulp.task('watch', ['build'], () => {
+    gulp.watch(['index.js', './gulpfile.js'], ['build']);
 });
 
-gulp.task('tdd', [], function (done) {
-    new Server(karmaConfig, done).start();
+gulp.task('test', ['build'], () => {
+    testHelper.test(karmaConfig);
+});
+
+gulp.task('tdd', ['build'], () => {
+    karmaConfig.singleRun = false;
+    gulp.watch(['index.js'], ['test']);
+    testHelper.test(karmaConfig);
 });
 
 gulp.task('default', ['watch']);
+
