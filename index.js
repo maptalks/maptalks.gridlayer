@@ -87,36 +87,35 @@ export class GridLayer extends maptalks.Layer {
 
             cols = grid.cols || ['*', '*'],
             rows = grid.rows || ['*', '*'];
-        if (grid['projection']) {
-            const res = map._getResolution(),
-                cellW = grid.width / res,
-                cellH = grid.height / res;
-            const gridCenter = map.coordinateToContainerPoint(new maptalks.Coordinate(grid['center'])),
-                point = map.coordinateToContainerPoint(coordinate);
-            const extent = new maptalks.Extent(
-                    cols[0] === '*' ? -Number.MAX_VALUE : gridCenter.x + cols[0] * cellW,
-                    rows[0] === '*' ? -Number.MAX_VALUE : gridCenter.y + rows[0] * cellH,
-                    cols[1] === '*' ? Number.MAX_VALUE : gridCenter.x + cols[1] * cellW,
-                    rows[1] === '*' ? Number.MAX_VALUE : gridCenter.y + rows[1] * cellH
-                );
-            if (!extent.contains(point)) {
-                return null;
-            }
-            const delta = 1E-6;
-            var col = Math.ceil(Math.abs(point.x - gridCenter.x) / cellW - delta),
-                row = Math.ceil(Math.abs(point.y - gridCenter.y) / cellH - delta);
-            col =  (point.x > gridCenter.x) ? col - 1 : -col;
-            row =  (point.y > gridCenter.y) ? row - 1 : -row;
-            const cnw = gridCenter.add(cellW * col, cellH * row);
-            const nw = map.containerPointToCoordinate(cnw),
-                ne = map.containerPointToCoordinate(cnw.add(cellW, 0)),
-                sw = map.containerPointToCoordinate(cnw.add(0, cellH));
-            const w = map.computeLength(nw, ne),
-                h = map.computeLength(nw, sw);
-            return new maptalks.Rectangle(nw, w, h);
-        } else {
+        if (!grid['projection']) {
             return null;
         }
+        const res = map._getResolution(),
+            cellW = grid.width / res,
+            cellH = grid.height / res;
+        const gridCenter = map.coordinateToContainerPoint(new maptalks.Coordinate(grid['center'])),
+            point = map.coordinateToContainerPoint(coordinate);
+        const extent = new maptalks.Extent(
+                cols[0] === '*' ? -Number.MAX_VALUE : gridCenter.x + cols[0] * cellW,
+                rows[0] === '*' ? -Number.MAX_VALUE : gridCenter.y + rows[0] * cellH,
+                cols[1] === '*' ? Number.MAX_VALUE : gridCenter.x + cols[1] * cellW,
+                rows[1] === '*' ? Number.MAX_VALUE : gridCenter.y + rows[1] * cellH
+            );
+        if (!extent.contains(point)) {
+            return null;
+        }
+        const delta = 1E-6;
+        let col = Math.ceil(Math.abs(point.x - gridCenter.x) / cellW - delta),
+            row = Math.ceil(Math.abs(point.y - gridCenter.y) / cellH - delta);
+        col =  (point.x > gridCenter.x) ? col - 1 : -col;
+        row =  (point.y > gridCenter.y) ? row - 1 : -row;
+        const cnw = gridCenter.add(cellW * col, cellH * row);
+        const nw = map.containerPointToCoordinate(cnw),
+            ne = map.containerPointToCoordinate(cnw.add(cellW, 0)),
+            sw = map.containerPointToCoordinate(cnw.add(0, cellH));
+        const w = map.computeLength(nw, ne),
+            h = map.computeLength(nw, sw);
+        return new maptalks.Rectangle(nw, w, h);
     }
 
     /**
@@ -181,13 +180,13 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
         if (this._resources) {
             return null;
         }
-        var resources = [];
+        let resources = [];
         if (this._compiledGridStyle) {
             resources = maptalks.Util.getExternalResources(this._compiledGridStyle);
         }
         if (this._compiledSymbols) {
             this._compiledSymbols.forEach(function (s) {
-                var c = maptalks.Util.getExternalResources(s);
+                const c = maptalks.Util.getExternalResources(s);
                 if (c) {
                     resources = resources.concat(c);
                 }
@@ -202,13 +201,13 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
 
     _compileStyles() {
         if (!this._compiledGridStyle) {
-            var symbol = maptalks.Util.convertResourceUrl(this.layer.options['symbol']);
+            const symbol = maptalks.Util.convertResourceUrl(this.layer.options['symbol']);
             this._compiledGridStyle = maptalks.MapboxUtil.loadFunctionTypes(symbol, () => {
                 return [this.getMap() ? this.getMap().getZoom() : null, null];
             });
         }
         if (!this._compiledSymbols) {
-            var map = this.getMap(),
+            const map = this.getMap(),
                 grid = this.layer.getGrid(),
                 data = grid['data'];
             this._compiledSymbols = [];
@@ -217,12 +216,12 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
                     if (!gridData[2]['symbol']) {
                         return;
                     }
-                    var argFn = (function (props) {
+                    const argFn = (function (props) {
                         return function () {
                             return [map.getZoom(), props];
                         };
                     })(gridData[2]['properties']);
-                    var s = maptalks.Util.convertResourceUrl(gridData[2]['symbol']);
+                    const s = maptalks.Util.convertResourceUrl(gridData[2]['symbol']);
                     this._compiledSymbols[index] = maptalks.MapboxUtil.loadFunctionTypes(s, argFn);
                 });
             }
@@ -240,7 +239,7 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
             cellW = gridInfo.width,
             cellH = gridInfo.height,
             p0 = this._getCellNW(cols[0], rows[0], gridInfo);
-        var p1, p2;
+        let p1, p2;
         this.context.beginPath();
         if (cellW < 0.5 || cellH < 0.5 || (this._compiledGridStyle['polygonOpacity'] > 0 || this._compiledGridStyle['polygonColor'] || this._compiledGridStyle['polygonPatternFile'])) {
             p2 = this._getCellNW(cols[1] + 1, rows[1] + 1, gridInfo);
@@ -357,11 +356,11 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
         const map = this.getMap(),
             mapSize = map.getSize(),
             mapExtent = new maptalks.PointExtent(0, 0, mapSize.width, mapSize.height);
-        var painted = false;
+        let painted = false;
         const cols = Array.isArray(gridData[0]) ? gridData[0] : [gridData[0], gridData[0]],
             rows = Array.isArray(gridData[1]) ? gridData[1] : [gridData[1], gridData[1]],
             p0 = this._getCellNW(cols[0], rows[0], gridInfo);
-        var p1, p2, gridExtent;
+        let p1, p2, gridExtent;
         for (let i = cols[0]; i <= cols[1]; i++) {
             for (let ii = rows[0]; ii <= rows[1]; ii++) {
                 p1 = this._getCellNW(i, ii, gridInfo);
@@ -396,14 +395,14 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
         const symbol = gridData[2]['symbol'];
         const map = this.getMap(),
             extent = map.getExtent();
-        var dataMarkers = this._dataMarkers;
+        let dataMarkers = this._dataMarkers;
         if (!dataMarkers) {
             this._dataMarkers = dataMarkers = [];
         }
         const coordinates = [];
         const cols = Array.isArray(gridData[0]) ? gridData[0] : [gridData[0], gridData[0]],
             rows = Array.isArray(gridData[1]) ? gridData[1] : [gridData[1], gridData[1]];
-        var p, c;
+        let p, c;
         for (let i = cols[0]; i <= cols[1]; i++) {
             for (let ii = rows[0]; ii <= rows[1]; ii++) {
                 p = this._getCellCenter(i, ii, gridInfo);
@@ -416,7 +415,7 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
         if (coordinates.length === 0) {
             return;
         }
-        var line = dataMarkers[index];
+        let line = dataMarkers[index];
         if (!line) {
             const lineSymbol = maptalks.Util.extend({}, symbol);
             lineSymbol['markerPlacement'] = 'point';
@@ -437,7 +436,7 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
     }
 
     _setCanvasStyle(symbol) {
-        var s = maptalks.Util.extend({}, defaultSymbol, symbol);
+        const s = maptalks.Util.extend({}, defaultSymbol, symbol);
         maptalks.Canvas.prepareCanvas(this.context, s, this._resources);
     }
 
