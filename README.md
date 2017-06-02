@@ -44,7 +44,7 @@ IE 9-11, Chrome, Firefox, other modern and mobile browsers.
 
 ## API Reference
 
-```GridLayer``` is a subclass of [maptalks.Layer](http://docs.maptalks.org/api/maptalks.Layer.html) and inherits all the methods of its parent.
+```GridLayer``` is a subclass of [maptalks.Layer](https://maptalks.github.io/docs/api/Layer.html) and inherits all the methods of its parent.
 
 ### `Constructor`
 
@@ -57,7 +57,7 @@ new maptalks.GridLayer(id, data, options)
 * options **Object** options
     * symbol **Object** symbol of the grid
     * container **String** specify the container for layer dom elements: 'front' or 'back' ('front' by default)
-    * Other options defined in [maptalks.Layer](http://docs.maptalks.org/api/maptalks.Layer.html)
+    * Other options defined in [maptalks.Layer](https://maptalks.github.io/docs/api/Layer.html)
 
 ```javascript
 // data format
