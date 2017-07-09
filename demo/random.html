@@ -44,7 +44,7 @@
 
     var r = new maptalks.VectorLayer('r').addTo(map);
     map.on('click', function(e) {
-        r.clear().addGeometry(grid.identify(e.coordinate));
+        r.clear().addGeometry(grid.identify(e.coordinate).geometry);
     })
 
     function getSymbol(col, row) {
