@@ -24,7 +24,7 @@ const options = {
         width  : 100,        // width of the grid cell
         height : 100,        // height of the grid cell
         projection : true,   // true|false, width和height是否是投影坐标值
-        cols      : [-1, '*'],  // '*'表示无限
+        cols      : [1, Infinity],
         rows      : [2, 5],
         data   : [
           //长度为3的数组, arr[0]是x序号, arr[0]为y的序号, arr[2]为对象, properties属性为数据, symbol属性为样式
@@ -61,13 +61,6 @@ export class GridLayer extends maptalks.Layer {
         return this.redraw();
     }
 
-    redraw() {
-        if (this._getRenderer()) {
-            this._getRenderer().redraw();
-        }
-        return this;
-    }
-
     isEmpty() {
         if (!this._grid) {
             return true;
@@ -81,41 +74,146 @@ export class GridLayer extends maptalks.Layer {
         return this.redraw();
     }
 
-    identify(coordinate) {
-        const map = this.getMap(),
-            grid = this.getGrid(),
+    /**
+     * Get grid's geographic exteng
+     * @return {Extent}
+     */
+    getGridExtent() {
+        const grid = this.getGrid(),
+            center = new maptalks.Coordinate(grid.center),
+            map = this.getMap(),
+            w = grid.width,
+            h = grid.height,
+            cols = grid.cols || [-Infinity, Infinity],
+            rows = grid.rows || [-Infinity, Infinity];
+        if (grid['projection']) {
+            // meters in projected coordinate system
+            const projection = map.getProjection(),
+                pcenter = projection.project(center);
+            const xmin = pcenter.x + cols[0] * w,
+                xmax = pcenter.x + cols[1] * w,
+                ymin = pcenter.y + cols[0] * h,
+                ymax = pcenter.y + cols[1] * h;
+            return new maptalks.Extent(xmin, ymin, xmax, ymax).convertTo(c => projection.unproject(c));
+        } else {
+            // distance in geographic meters
+            const sw = map.locate(center, -w * cols[0], -h * rows[0]),
+                ne = map.locate(center, w * cols[1], h * rows[1]);
+            return new maptalks.Extent(sw, ne);
+        }
+    }
 
-            cols = grid.cols || ['*', '*'],
-            rows = grid.rows || ['*', '*'];
-        if (!grid['projection']) {
+    /**
+     * Get cell index at coordinate
+     * @param  {Coordinate} coordinate
+     * @return {Object}
+     * @private
+     */
+    getCellAt(coordinate) {
+        const grid = this.getGrid(),
+            map = this.getMap(),
+            extent = this.getGridExtent();
+        if (!extent.contains(coordinate)) {
             return null;
         }
-        const res = map._getResolution(),
-            cellW = grid.width / res,
-            cellH = grid.height / res;
-        const gridCenter = map.coordinateToContainerPoint(new maptalks.Coordinate(grid['center'])),
-            point = map.coordinateToContainerPoint(coordinate);
-        const extent = new maptalks.Extent(
-                cols[0] === '*' ? -Number.MAX_VALUE : gridCenter.x + cols[0] * cellW,
-                rows[0] === '*' ? -Number.MAX_VALUE : gridCenter.y + rows[0] * cellH,
-                cols[1] === '*' ? Number.MAX_VALUE : gridCenter.x + cols[1] * cellW,
-                rows[1] === '*' ? Number.MAX_VALUE : gridCenter.y + rows[1] * cellH
-            );
-        if (!extent.contains(point)) {
+        const gridCenter = new maptalks.Coordinate(grid.center);
+        if (grid['projection']) {
+            const center = map.coordinateToPoint(gridCenter),
+                size = getCellPointSize(map, grid);
+            const p = map.coordinateToPoint(coordinate),
+                col = Math.floor((p.x - center.x) / size[0]),
+                row = Math.floor((p.y - center.y) / size[0]);
+            return [col, row];
+        } else {
+            const distX = map.computeLength(new maptalks.Coordinate(coordinate.x, gridCenter.y), gridCenter),
+                col = Math.floor(distX / grid.width);
+            const distY = map.computeLength(new maptalks.Coordinate(gridCenter.x, coordinate.y), gridCenter),
+                row = Math.floor(distY / grid.height);
+            return [col, row];
+        }
+    }
+
+    getCellGeometry(col, row) {
+        const map = this.getMap(),
+            grid = this.getGrid();
+        if (grid['projection']) {
+            const gridCenter = new maptalks.Coordinate(grid.center),
+                center = map.coordinateToPoint(gridCenter),
+                size = getCellPointSize(map, grid),
+                width = size[0],
+                height = size[1];
+            const cnw = center.add(width * col, height * row);
+            const nw = map.pointToCoordinate(cnw),
+                ne = map.pointToCoordinate(cnw.add(width, 0)),
+                sw = map.pointToCoordinate(cnw.add(0, height));
+            const w = map.computeLength(nw, ne),
+                h = map.computeLength(nw, sw);
+            return new maptalks.Rectangle(nw, w, h);
+        } else {
             return null;
         }
-        const delta = 1E-6;
-        let col = Math.ceil(Math.abs(point.x - gridCenter.x) / cellW - delta),
-            row = Math.ceil(Math.abs(point.y - gridCenter.y) / cellH - delta);
-        col =  (point.x > gridCenter.x) ? col - 1 : -col;
-        row =  (point.y > gridCenter.y) ? row - 1 : -row;
-        const cnw = gridCenter.add(cellW * col, cellH * row);
-        const nw = map.containerPointToCoordinate(cnw),
-            ne = map.containerPointToCoordinate(cnw.add(cellW, 0)),
-            sw = map.containerPointToCoordinate(cnw.add(0, cellH));
-        const w = map.computeLength(nw, ne),
-            h = map.computeLength(nw, sw);
-        return new maptalks.Rectangle(nw, w, h);
+    }
+
+    /**
+     * 变形虫
+     * @param  {Rect} startCell 开始网格
+     * @return {Array}  结果网格数组
+     */
+    visitAround(coordinate, cb) {
+        const grid = this.getGrid(),
+            gridData = grid.data;
+        if (!coordinate || !grid.data || !cb) {
+            return;
+        }
+        const data = [];
+        for (let i = 0; i < gridData.length; i++) {
+            let cols = gridData[i][0],
+                rows = gridData[i][1];
+            const value = gridData[i][2];
+            if (!Array.isArray(cols)) {
+                cols = [cols, cols];
+            }
+            if (!Array.isArray(rows)) {
+                rows = [rows, rows];
+            }
+            for (let ii = cols[0]; ii <= cols[1]; ii++) {
+                for (let iii = rows[0]; iii <= rows[1]; iii++) {
+                    data.push([ii, iii, value]);
+                }
+            }
+        }
+        if (!data.length) {
+            return;
+        }
+
+        const startCell = this.getCellAt(coordinate);
+        //根据与开始网格的距离对所有网格排序
+        const sorted = data.sort((a, b) => {
+            return Math.pow((a[0] - startCell[0]), 2) + Math.pow((a[1] - startCell[1]), 2) - Math.pow((b[0] - startCell[0]), 2) - Math.pow((b[1] - startCell[1]), 2);
+        });
+
+        for (let i = 0, l = sorted.length; i < l; i++) {
+            if (cb(sorted[i]) === false) {
+                break;
+            }
+        }
+    }
+
+    identify(coordinate) {
+        if (!coordinate) {
+            return null;
+        }
+        const extent = this.getGridExtent();
+        if (!extent.contains(coordinate)) {
+            return null;
+        }
+        const idx = this.getCellAt(coordinate);
+        const rectangle = this.getCellGeometry(idx[0], idx[1]);
+        return {
+            col : idx[0],
+            row : idx[1],
+            geometry : rectangle
+        };
     }
 
     /**
@@ -162,6 +260,14 @@ const symbolizers = [
 
 GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRenderer {
 
+    needToRedraw() {
+        const map = this.getMap();
+        if (!map.getPitch() && map.isZooming()) {
+            return false;
+        }
+        return super.needToRedraw();
+    }
+
     draw() {
         const grid = this.layer.getGrid();
         if (!grid) {
@@ -200,7 +306,7 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
     }
 
     redraw() {
-
+        this.setToRedraw();
     }
 
     _compileStyles() {
@@ -240,32 +346,32 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
         }
         const cols = gridInfo.cols,
             rows = gridInfo.rows,
-            // cellW = gridInfo.width,
-            // cellH = gridInfo.height,
+            width = gridInfo.width,
+            height = gridInfo.height,
             p0 = this._getCellNW(cols[0], rows[0], gridInfo);
         let p1, p2;
         this.context.beginPath();
-        // if (cellW < 0.5 || cellH < 0.5 || (this._compiledGridStyle['polygonOpacity'] > 0 || this._compiledGridStyle['polygonColor'] || this._compiledGridStyle['polygonPatternFile'])) {
-        //     p2 = this._getCellNW(cols[1] + 1, rows[1] + 1, gridInfo);
-        //     this.context.rect(p0[0], p0[1], p2[0] - p0[0], p2[1] - p0[1]);
-        //     if (this._compiledGridStyle['polygonOpacity'] > 0) {
-        //         maptalks.Canvas.fillCanvas(this.context, this._compiledGridStyle['polygonOpacity'], p0[0], p0[1]);
-        //     } else {
-        //         maptalks.Canvas.fillCanvas(this.context, 1, p0[0], p0[1]);
-        //     }
-        //     if (cellW < 0.5 || cellH < 0.5) {
-        //         return;
-        //     }
-        // }
-        for (let i = cols[0]; i <= cols[1] + 1; i++) {
+        if (width < 0.5 || height < 0.5 || (this._compiledGridStyle['polygonOpacity'] > 0 || this._compiledGridStyle['polygonColor'] || this._compiledGridStyle['polygonPatternFile'])) {
+            p2 = this._getCellNW(cols[1] + 1, rows[1] + 1, gridInfo);
+            this.context.rect(p0.x, p0.y, p2.x - p0.x, p2.y - p0.y);
+            if (this._compiledGridStyle['polygonOpacity'] > 0) {
+                maptalks.Canvas.fillCanvas(this.context, this._compiledGridStyle['polygonOpacity'], p0.x, p0.y);
+            } else {
+                maptalks.Canvas.fillCanvas(this.context, 1, p0.x, p0.y);
+            }
+            if (width < 0.5 || height < 0.5) {
+                return;
+            }
+        }
+        for (let i = cols[0]; i <= cols[1]; i++) {
             p1 = this._getCellNW(i, rows[0], gridInfo);
-            p2 = this._getCellNW(i, rows[1] + 1, gridInfo);
+            p2 = this._getCellNW(i, rows[1], gridInfo);
             this.context.moveTo(p1.x, p1.y);
             this.context.lineTo(p2.x, p2.y);
         }
-        for (let i = rows[0]; i <= rows[1] + 1; i++) {
+        for (let i = rows[0]; i <= rows[1]; i++) {
             p1 = this._getCellNW(cols[0], i, gridInfo);
-            p2 = this._getCellNW(cols[1] + 1, i, gridInfo);
+            p2 = this._getCellNW(cols[1], i, gridInfo);
             this.context.moveTo(p1.x, p1.y);
             this.context.lineTo(p2.x, p2.y);
         }
@@ -275,19 +381,18 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
     _getProjGridToDraw() {
         const grid = this.layer.getGrid(),
             map = this.getMap(),
-            projection = map.getProjection(),
+            // projection = map.getProjection(),
             extent = map._get2DExtent(),
-            gridX = grid.cols || [Infinity, Infinity],
-            gridY = grid.rows || [Infinity, Infinity],
+            gridX = grid.cols || [-Infinity, Infinity],
+            gridY = grid.rows || [-Infinity, Infinity],
             gridCenter = new maptalks.Coordinate(grid.center),
             center = map.coordinateToPoint(gridCenter),
-            target = projection.project(gridCenter)._add(grid.width, grid.height),
-            ptarget = map._prjToPoint(target),
-            width = Math.abs(ptarget.x - center.x),
-            height = Math.abs(ptarget.y - center.y);
+            size = getCellPointSize(map, grid),
+            width = size[0],
+            height = size[1];
         const gridExtent = new maptalks.PointExtent(
-            center.x - gridX[0] * width,
-            center.y - gridY[0] * height,
+            center.x + gridX[0] * width,
+            center.y + gridY[0] * height,
             center.x + gridX[1] * width,
             center.y + gridY[1] * height
         );
@@ -307,8 +412,8 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
         return {
             cols : cols,
             rows : rows,
-            width : width,
-            height : height,
+            width : Math.round(width),
+            height : Math.round(height),
             center : center
         };
     }
@@ -318,21 +423,23 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
             grid = this.layer.getGrid();
         if (grid['projection']) {
             const p = new maptalks.Point(
-                gridInfo.center.x + (col > 0 ? col - 1 : col) * gridInfo.width,
-                gridInfo.center.y + (row > 0 ? row - 1 : row) * gridInfo.height
+                gridInfo.center.x + col * gridInfo.width,
+                gridInfo.center.y + row * gridInfo.height
             );
-            return map._pointToContainerPoint(p);
+            return map._pointToContainerPoint(p)._floor();
+        } else {
+            const center = new maptalks.Coordinate(grid.center);
+            return map.locate(center, grid.width * col, grid.height * row);
         }
-        return null;
     }
 
     _getCellCenter(col, row, gridInfo) {
         const grid = this.layer.getGrid();
         if (grid['projection']) {
-            return [
-                gridInfo.center.x + ((col > 0 ? col - 1 : col) + 1 / 2) * gridInfo.width,
-                gridInfo.center.y + ((row > 0 ? row - 1 : row) + 1 / 2) * gridInfo.height
-            ];
+            return new maptalks.Point(
+                gridInfo.center.x + (col + 1 / 2) * gridInfo.width,
+                gridInfo.center.y + (row + 1 / 2) * gridInfo.height
+            );
         }
         return null;
     }
@@ -341,7 +448,7 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
         const grid = this.layer.getGrid(),
             gridInfo = grid['projection'] ? this._getProjGridToDraw() : this._getGridToDraw(),
             data = grid['data'];
-        if (!Array.isArray(data) || !data.length) {
+        if (!gridInfo || !Array.isArray(data) || !data.length) {
             return;
         }
         if (!this._gridSymbolTests) {
@@ -377,14 +484,14 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
                 p3 = this._getCellNW(i + 1, ii + 1, gridInfo);
                 p4 = this._getCellNW(i, ii + 1, gridInfo);
                 gridExtent = new maptalks.PointExtent(p1.x, p1.y, p3.x, p3.y);
-                // marker as an invalid grid if width or height is abnormally large.
+                // marker as an invalid grid if width or height is abnormally large, due to containerPoint conversion
                 if (gridExtent.getWidth() > 1E4 || gridExtent.getHeight() > 1E4 || !mapExtent.intersects(gridExtent)) {
                     continue;
                 }
                 if (!painted) {
                     painted = true;
                     this._setCanvasStyle(symbol);
-                    this.context.beginPath();
+                    ctx.beginPath();
                 }
                 ctx.moveTo(p1.x, p1.y);
                 ctx.lineTo(p2.x, p2.y);
@@ -394,7 +501,8 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
             }
         }
         if (painted) {
-            maptalks.Canvas.fillCanvas(this.context, symbol['polygonOpacity'], p0.x, p0.y);
+            maptalks.Canvas.fillCanvas(ctx, symbol['polygonOpacity'], p0.x, p0.y);
+            maptalks.Canvas._stroke(ctx, symbol['lineOpacity']);
         }
     }
 
@@ -407,10 +515,10 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
         return false;
     }
 
-    _forceRenderOnMovingDataCenter(gridData, index, gridInfo) {
+    _drawDataCenter(gridData, index, gridInfo) {
         const symbol = gridData[2]['symbol'];
         const map = this.getMap(),
-            extent = map.getExtent();
+            extent = map._get2DExtent();
         let dataMarkers = this._dataMarkers;
         if (!dataMarkers) {
             this._dataMarkers = dataMarkers = [];
@@ -418,13 +526,11 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
         const coordinates = [];
         const cols = Array.isArray(gridData[0]) ? gridData[0] : [gridData[0], gridData[0]],
             rows = Array.isArray(gridData[1]) ? gridData[1] : [gridData[1], gridData[1]];
-        let p, c;
         for (let i = cols[0]; i <= cols[1]; i++) {
             for (let ii = rows[0]; ii <= rows[1]; ii++) {
-                p = this._getCellCenter(i, ii, gridInfo);
-                c = map.containerPointToCoordinate(new maptalks.Point(p));
-                if (extent.contains(c)) {
-                    coordinates.push(c);
+                const p = this._getCellCenter(i, ii, gridInfo);
+                if (extent.contains(p)) {
+                    coordinates.push(map.pointToCoordinate(p));
                 }
             }
         }
@@ -465,3 +571,13 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
 });
 
 
+function getCellPointSize(map, grid) {
+    const projection = map.getProjection(),
+        gridCenter = new maptalks.Coordinate(grid.center),
+        center = map.coordinateToPoint(gridCenter),
+        target = projection.project(gridCenter)._add(grid.width, grid.height),
+        ptarget = map._prjToPoint(target),
+        width = Math.abs(ptarget.x - center.x),
+        height = Math.abs(ptarget.y - center.y);
+    return [width, height];
+}
