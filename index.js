@@ -11,6 +11,7 @@ const defaultSymbol = {
 };
 
 const options = {
+    'unit' : 'projection',
     'symbol' : maptalks.Util.extend({}, defaultSymbol),
     'debug'  : false
 };
@@ -74,6 +75,14 @@ export class GridLayer extends maptalks.Layer {
         return this.redraw();
     }
 
+    getGridProjection() {
+        if (this.options['projectionName']) {
+            return maptalks.projection[this.options['projectionName'].toUpperCase()];
+        } else {
+            return this.getMap().getProjection();
+        }
+    }
+
     /**
      * Get grid's geographic exteng
      * @return {Extent}
@@ -86,21 +95,26 @@ export class GridLayer extends maptalks.Layer {
             h = grid.height,
             cols = grid.cols || [-Infinity, Infinity],
             rows = grid.rows || [-Infinity, Infinity];
-        if (grid['projection']) {
+        if (grid['unit'] === 'projection') {
             // meters in projected coordinate system
-            const projection = map.getProjection(),
+            const projection = this.getGridProjection(),
                 pcenter = projection.project(center);
             const xmin = pcenter.x + cols[0] * w,
                 xmax = pcenter.x + cols[1] * w,
                 ymin = pcenter.y + cols[0] * h,
                 ymax = pcenter.y + cols[1] * h;
             return new maptalks.Extent(xmin, ymin, xmax, ymax).convertTo(c => projection.unproject(c));
-        } else {
+        } else if (grid['unit'] === 'meter') {
             // distance in geographic meters
             const sw = map.locate(center, -w * cols[0], -h * rows[0]),
                 ne = map.locate(center, w * cols[1], h * rows[1]);
             return new maptalks.Extent(sw, ne);
+        } else if (grid['unit'] === 'degree') {
+            const sw = center.add(w * cols[0], h * rows[0]),
+                ne = center.add(w * cols[1], h * rows[1]);
+            return new maptalks.Extent(sw, ne);
         }
+        return null;
     }
 
     /**
@@ -117,29 +131,36 @@ export class GridLayer extends maptalks.Layer {
             return null;
         }
         const gridCenter = new maptalks.Coordinate(grid.center);
-        if (grid['projection']) {
+        if (grid['unit'] === 'projection') {
             const center = map.coordinateToPoint(gridCenter),
-                size = getCellPointSize(map, grid);
+                size = getCellPointSize(this, grid);
             const p = map.coordinateToPoint(coordinate),
                 col = Math.floor((p.x - center.x) / size[0]),
                 row = Math.floor((p.y - center.y) / size[0]);
             return [col, row];
-        } else {
+        } else if (grid['unit'] === 'meter') {
             const distX = map.computeLength(new maptalks.Coordinate(coordinate.x, gridCenter.y), gridCenter),
                 col = Math.floor(distX / grid.width);
             const distY = map.computeLength(new maptalks.Coordinate(gridCenter.x, coordinate.y), gridCenter),
                 row = Math.floor(distY / grid.height);
             return [col, row];
+        } else if (grid['unit'] === 'degree') {
+            const distX = coordinate.x - gridCenter.x,
+                col = Math.floor(distX / grid.width);
+            const distY = coordinate.y - gridCenter.y,
+                row = Math.floor(distY / grid.height);
+            return [col, row];
         }
+        return null;
     }
 
     getCellGeometry(col, row) {
         const map = this.getMap(),
             grid = this.getGrid();
-        if (grid['projection']) {
-            const gridCenter = new maptalks.Coordinate(grid.center),
-                center = map.coordinateToPoint(gridCenter),
-                size = getCellPointSize(map, grid),
+        const gridCenter = new maptalks.Coordinate(grid.center);
+        if (grid['unit'] === 'projection') {
+            const center = map.coordinateToPoint(gridCenter),
+                size = getCellPointSize(this, grid),
                 width = size[0],
                 height = size[1];
             const cnw = center.add(width * col, height * row);
@@ -149,9 +170,12 @@ export class GridLayer extends maptalks.Layer {
             const w = map.computeLength(nw, ne),
                 h = map.computeLength(nw, sw);
             return new maptalks.Rectangle(nw, w, h);
-        } else {
+        } else if (grid['unit'] === 'meter') {
             return null;
+        } else if (grid['unit'] === 'degree') {
+            return gridCenter.add(grid.width * col, grid.height * row);
         }
+        return null;
     }
 
     /**
@@ -340,7 +364,7 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
 
     _drawGrid() {
         const grid = this.layer.getGrid(),
-            gridInfo = grid['projection'] ? this._getProjGridToDraw() : this._getGridToDraw();
+            gridInfo = grid['unit'] === 'projection' ? this._getProjGridToDraw() : this._getGridToDraw();
         if (!gridInfo) {
             return;
         }
@@ -387,7 +411,7 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
             gridY = grid.rows || [-Infinity, Infinity],
             gridCenter = new maptalks.Coordinate(grid.center),
             center = map.coordinateToPoint(gridCenter),
-            size = getCellPointSize(map, grid),
+            size = getCellPointSize(this.layer, grid),
             width = size[0],
             height = size[1];
         const gridExtent = new maptalks.PointExtent(
@@ -418,35 +442,96 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
         };
     }
 
+    _getGridToDraw() {
+        const grid = this.layer.getGrid(),
+            map = this.getMap(),
+            // projection = map.getProjection(),
+            extent = map.getExtent(),
+            gridCenter = new maptalks.Coordinate(grid.center),
+            gridExtent = this.layer.getGridExtent(),
+            w = grid.width,
+            h = grid.height;
+
+        const intersection = extent.intersection(gridExtent);
+        if (!intersection) {
+            return null;
+        }
+        const delta = 1E-6;
+        let cols, rows;
+        if (grid['unit'] === 'meter') {
+            const dx1 = map.computeLength(new maptalks.Coordinate(intersection.xmin, gridCenter.y), gridCenter),
+                dx2 = map.computeLength(new maptalks.Coordinate(intersection.xmax, gridCenter.y), gridCenter);
+            const dy1 = map.computeLength(new maptalks.Coordinate(gridCenter.y, intersection.ymin), gridCenter),
+                dy2 = map.computeLength(new maptalks.Coordinate(intersection.ymax, gridCenter.y), gridCenter);
+            cols = [
+                -Math.ceil(dx1 / grid.width),
+                Math.ceil(dx2 / grid.width)
+            ];
+            rows = [
+                -Math.ceil(dy1 / grid.height),
+                Math.ceil(dy2 / grid.height)
+            ];
+        } else if (grid['unit'] === 'degree') {
+            cols = [
+                -Math.ceil((gridCenter.x - intersection.xmin - delta) / w),
+                Math.ceil((intersection.xmax - gridCenter.x - delta) / w)
+            ];
+            rows = [
+                -Math.ceil((gridCenter.y - intersection.ymin - delta) / h),
+                Math.ceil((intersection.ymax - gridCenter.y - delta) / h)
+            ];
+        }
+
+        return {
+            cols : cols,
+            rows : rows,
+            center : gridCenter
+        };
+    }
+
     _getCellNW(col, row, gridInfo) {
         const map = this.getMap(),
             grid = this.layer.getGrid();
-        if (grid['projection']) {
+        if (grid['unit'] === 'projection') {
             const p = new maptalks.Point(
                 gridInfo.center.x + col * gridInfo.width,
                 gridInfo.center.y + row * gridInfo.height
             );
             return map._pointToContainerPoint(p)._floor();
-        } else {
+        } else if (grid['unit'] === 'meter') {
             const center = new maptalks.Coordinate(grid.center);
-            return map.locate(center, grid.width * col, grid.height * row);
+            const target = map.locate(center, grid.width * col, grid.height * row);
+            return map.coordinateToContainerPoint(target)._floor();
+        } else if (grid['unit'] === 'degree') {
+            const center = new maptalks.Coordinate(grid.center);
+            const target = center.add(col * grid.width, row * grid.height);
+            return map.coordinateToContainerPoint(target)._floor();
         }
+        return null;
     }
 
     _getCellCenter(col, row, gridInfo) {
-        const grid = this.layer.getGrid();
-        if (grid['projection']) {
-            return new maptalks.Point(
+        const grid = this.layer.getGrid(),
+            map = this.getMap();
+        if (grid['unit'] === 'projection') {
+            const p = new maptalks.Point(
                 gridInfo.center.x + (col + 1 / 2) * gridInfo.width,
                 gridInfo.center.y + (row + 1 / 2) * gridInfo.height
             );
+            return map.pointToCoordinate(p);
+        } else if (grid['unit'] === 'meter') {
+            const center = new maptalks.Coordinate(grid.center);
+            return  map.locate(center, grid.width * (col + 1 / 2), grid.height * (row + 1 / 2));
+        } else if (grid['unit'] === 'degree') {
+            const center = new maptalks.Coordinate(grid.center);
+            return center.add(grid.width * (col + 1 / 2), grid.height * (row + 1 / 2));
         }
         return null;
     }
 
     _drawData() {
         const grid = this.layer.getGrid(),
-            gridInfo = grid['projection'] ? this._getProjGridToDraw() : this._getGridToDraw(),
+            gridInfo = grid['unit'] === 'projection' ? this._getProjGridToDraw() : this._getGridToDraw(),
             data = grid['data'];
         if (!gridInfo || !Array.isArray(data) || !data.length) {
             return;
@@ -518,22 +603,30 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
     _drawDataCenter(gridData, index, gridInfo) {
         const symbol = gridData[2]['symbol'];
         const map = this.getMap(),
-            extent = map._get2DExtent();
+            extent = map.getExtent();
         let dataMarkers = this._dataMarkers;
         if (!dataMarkers) {
             this._dataMarkers = dataMarkers = [];
         }
         const coordinates = [];
-        const cols = Array.isArray(gridData[0]) ? gridData[0] : [gridData[0], gridData[0]],
-            rows = Array.isArray(gridData[1]) ? gridData[1] : [gridData[1], gridData[1]];
-        for (let i = cols[0]; i <= cols[1]; i++) {
-            for (let ii = rows[0]; ii <= rows[1]; ii++) {
-                const p = this._getCellCenter(i, ii, gridInfo);
-                if (extent.contains(p)) {
-                    coordinates.push(map.pointToCoordinate(p));
+        if (!Array.isArray(gridData[0]) && !Array.isArray(gridData[1])) {
+            const p = this._getCellCenter(gridData[0], gridData[1], gridInfo);
+            if (extent.contains(p)) {
+                coordinates.push(p);
+            }
+        } else {
+            const cols = Array.isArray(gridData[0]) ? gridData[0] : [gridData[0], gridData[0]],
+                rows = Array.isArray(gridData[1]) ? gridData[1] : [gridData[1], gridData[1]];
+            for (let i = cols[0]; i <= cols[1]; i++) {
+                for (let ii = rows[0]; ii <= rows[1]; ii++) {
+                    const p = this._getCellCenter(i, ii, gridInfo);
+                    if (extent.contains(p)) {
+                        coordinates.push(p);
+                    }
                 }
             }
         }
+
         if (coordinates.length === 0) {
             return;
         }
@@ -571,8 +664,9 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
 });
 
 
-function getCellPointSize(map, grid) {
-    const projection = map.getProjection(),
+function getCellPointSize(layer, grid) {
+    const projection = layer.getGridProjection(),
+        map = layer.getMap(),
         gridCenter = new maptalks.Coordinate(grid.center),
         center = map.coordinateToPoint(gridCenter),
         target = projection.project(gridCenter)._add(grid.width, grid.height),
