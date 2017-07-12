@@ -31,7 +31,11 @@
         }
         var gridData = readData(data);
         // map.setCenter(gridData.center);
-        var grid = new maptalks.GridLayer('grid', gridData).addTo(map);
+        var grid = new maptalks.GridLayer('grid', gridData, {
+            symbol : {
+                'lineWidth' : 0
+            }
+        }).addTo(map);
     });
 
     function readData(content) {
@@ -90,6 +94,7 @@
                                         'polygonOpacity' : 0.7,
                                         'lineWidth' : 0,
                                         'lineColor' : '#bbb',
+                                        'lineOpacity' : 0
                                         // 'textName' : '{value}',
                                         // 'textSize' : { stops: [[14, 0], [18, 48]] }
                                     },

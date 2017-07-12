@@ -33,7 +33,6 @@ var defaultSymbol = {
 };
 
 var options = {
-    'unit': 'projection',
     'symbol': maptalks.Util.extend({}, defaultSymbol),
     'debug': false
 };
@@ -72,6 +71,9 @@ var GridLayer = function (_maptalks$Layer) {
 
         var _this = _possibleConstructorReturn(this, _maptalks$Layer.call(this, id, options));
 
+        if (!grid['unit']) {
+            grid['unit'] = 'projection';
+        }
         _this._grid = grid;
         return _this;
     }
@@ -424,7 +426,7 @@ GridLayer.registerRenderer('canvas', function (_maptalks$renderer$Ca) {
     _class.prototype._drawGrid = function _drawGrid() {
         var grid = this.layer.getGrid(),
             gridInfo = grid['unit'] === 'projection' ? this._getProjGridToDraw() : this._getGridToDraw();
-        if (!gridInfo) {
+        if (!gridInfo || this._compiledGridStyle.lineOpacity <= 0 || this._compiledGridStyle.lineWidth <= 0) {
             return;
         }
         var cols = gridInfo.cols,

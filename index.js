@@ -11,7 +11,6 @@ const defaultSymbol = {
 };
 
 const options = {
-    'unit' : 'projection',
     'symbol' : maptalks.Util.extend({}, defaultSymbol),
     'debug'  : false
 };
@@ -46,6 +45,9 @@ export class GridLayer extends maptalks.Layer {
 
     constructor(id, grid, options) {
         super(id, options);
+        if (!grid['unit']) {
+            grid['unit'] = 'projection';
+        }
         this._grid = grid;
     }
 
@@ -365,7 +367,7 @@ GridLayer.registerRenderer('canvas', class extends maptalks.renderer.CanvasRende
     _drawGrid() {
         const grid = this.layer.getGrid(),
             gridInfo = grid['unit'] === 'projection' ? this._getProjGridToDraw() : this._getGridToDraw();
-        if (!gridInfo) {
+        if (!gridInfo || this._compiledGridStyle.lineOpacity <= 0 || this._compiledGridStyle.lineWidth <= 0) {
             return;
         }
         const cols = gridInfo.cols,
