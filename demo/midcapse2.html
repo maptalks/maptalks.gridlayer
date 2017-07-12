@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>maptalks.GridLayer demo</title>
+    <script src="https://unpkg.com/maptalks/dist/maptalks.min.js"></script>
+    <script src="../dist/maptalks.gridlayer.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://unpkg.com/maptalks/dist/maptalks.css">
+    <style>
+        #map { width: 960px; height: 600px; }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+    var map = new maptalks.Map("map",{
+        center:  [118.074096, 25.819693],
+        zoom:  11,
+        hitDetect : false,
+        attributionControl : {
+            'content' : '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        },
+        baseLayer : new maptalks.TileLayer("tile",{
+            urlTemplate : 'http://{s}.tile.thunderforest.com/transport/{z}/{x}/{y}.png',
+            subdomains:['a','b','c']
+        })
+    });
+
+    maptalks.Ajax.get('micapse_12h_1km.txt', function (err, data) {
+        if (err || !data) {
+            throw new Error('error when loading midcapse_12h_1km.txt');
+        }
+        var gridData = readData(data);
+        // map.setCenter(gridData.center);
+        var grid = new maptalks.GridLayer('grid', gridData).addTo(map);
+    });
+
+    function readData(content) {
+        const data = [];
+        // grid's southwest and northeast
+        var sw, ne,
+            // grid width and grid height
+            width, height,
+            center,
+            cols, rows,
+            centerCol = 0,
+            centerRow = 0;
+        var line = 0;
+        var dataRows = 0, dataLineCnt = 0;
+        var dataLine = '';
+        var currentLine = '';
+        var cols;
+        for (var i = 0, l = content.length; i < l; i++) {
+            var chr = content.charAt(i);
+            if (line < 2) {
+                currentLine += chr;
+            }
+            if (chr === '\n') {
+                if (line === 1) {
+                    var descripts = currentLine.split(' ');
+                    width = +(descripts[6]);
+                    height = +(descripts[7]);
+                    sw = new maptalks.Coordinate(descripts[8], descripts[10]);
+                    ne = new maptalks.Coordinate(descripts[9], descripts[11]);
+                    cols = +(descripts[12]),
+                    rows = +(descripts[13]),
+                    center = sw.add(ne)._multi(1 / 2);
+                    centerCol = Math.floor((center.x - sw.x) / width);
+                    centerRow = Math.floor((center.y - sw.y) / height);
+                }
+                if (line < 2) {
+                    currentLine = '';
+                }
+                line++;
+            } else if (line === 2) {
+                dataLine += chr;
+                if (chr === ' ') {
+                    dataRows++;
+                }
+                if (dataRows === cols) {
+                    var cells = dataLine.split(' ');
+                    for (var ii = 0; ii < cells.length; ii++) {
+                        var value = +cells[ii];
+                        if (value !== 0) {
+                            data.push([
+                                ii - centerCol,
+                                dataLineCnt - centerRow,
+                                {
+                                    symbol : {
+                                        'polygonFill' : gridValue2FillColor(value),
+                                        'polygonOpacity' : 0.7,
+                                        'lineWidth' : 0,
+                                        'lineColor' : '#bbb',
+                                        // 'textName' : '{value}',
+                                        // 'textSize' : { stops: [[14, 0], [18, 48]] }
+                                    },
+                                    properties : {
+                                        value : value.toFixed(1)
+                                    }
+                                }
+                            ]);
+                        }
+                    }
+                    dataLine = '';
+                    dataRows = 0;
+                    dataLineCnt++;
+                }
+
+            }
+        }
+        return {
+            unit : 'degree',
+            center : center,
+            width :  width,
+            height : height,
+            cols      : [centerCol - cols, cols - centerCol],
+            rows      : [centerRow - rows, rows - centerRow],
+            data : data
+        };
+    }
+
+    function gridValue2FillColor(value) {
+        if (value < 0.5) {
+            return "#f8eb58";
+        } else if (value < 1.5) {
+            return "#ff8a00";
+        } else if (value < 2.5) {
+            return "#ff009c";
+        } else {
+            return "#ff0000";
+        }
+    }
+</script>
+</body>
+</html>
