@@ -8,13 +8,9 @@
     <script src="gridvalue.js"></script>
     <link type="text/css" rel="stylesheet" href="https://unpkg.com/maptalks@<2.0.0/dist/maptalks.css">
     <style>
-        html,
-        body {
-            margin: 0px;
-            height: 100%;
-            width: 100%;
-        }
+        html, body { margin: 0px; height: 100%; width: 100%;}
         #map { width: 100%; height: 100%; }
+        .heading { background-color: #34495e; color : #fff; padding:8px 8px; font : 24px sans-serif; }
     </style>
 </head>
 <body>
@@ -32,6 +28,11 @@
             subdomains:['a','b','c']
         })
     });
+
+    new maptalks.control.Attribution({
+        position : 'top-right',
+        content : '<div class="heading">点击任意网格, 计算客流来源超过30%的区域</div>'
+      }).addTo(map);
 
     // prepare grid data
     var data = [];
@@ -86,7 +87,19 @@
         }
     })).addTo(map);
 
-    var r = new maptalks.VectorLayer('v').addTo(map);
+    var r = new maptalks.VectorLayer('v', {
+        style : {
+            filter : true,
+            symbol : {
+                'lineColor':"#000000",
+                'lineWidth':1,
+                'lineOpacity':1,
+                //'line-dasharray': getLineDashArray(symbol["stroke-type"]),  //"--."
+                'polygonFill':'#0ff',
+                'polygonOpacity':0.5
+            }
+        }
+    }).addTo(map);
 
     var threshold = 30;
     var sum = 0;
