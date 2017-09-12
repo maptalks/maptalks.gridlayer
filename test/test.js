@@ -84,11 +84,14 @@ describe('GridLayer', function () {
             width : 100,
             height : 100,
             cols : [-5, 5],
-            rows : [-5, 5]
+            rows : [-5, 5],
+            data : [
+                [0, 0, { properties : 1 }]
+            ]
         });
         layer.on('layerload', function () {
             var expected = { 'type':'Feature', 'geometry':{ 'type':'Polygon', 'coordinates':[[[0, 0], [0.0008983152841103206, 0], [0.0008983152842207313, -0.0008983152841103206], [0, -0.0008983152841103206], [0, 0]]] }, 'properties':null };
-            var actual = layer.identify(map.getCenter()).toGeoJSON();
+            var actual = layer.identify(map.getCenter()).geometry.toGeoJSON();
             expect(actual).to.be.eql(expected);
             done();
         })
