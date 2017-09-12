@@ -64,6 +64,20 @@ export class GridLayer extends maptalks.Layer {
         return this.redraw();
     }
 
+    setGridData(data) {
+        this._grid.data = data;
+        return this.redraw();
+    }
+
+    redraw() {
+        const renderer = this._getRenderer();
+        if (!renderer) {
+            return this;
+        }
+        renderer.redraw();
+        return this;
+    }
+
     isEmpty() {
         if (!this._grid) {
             return true;

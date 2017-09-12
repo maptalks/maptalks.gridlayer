@@ -25,10 +25,20 @@ As a plugin, `maptalks.gridlayer` must be loaded after `maptalks.js` in browsers
 <script type="text/javascript" src="https://unpkg.com/maptalks/dist/maptalks.min.js"></script>
 <script type="text/javascript" src="https://unpkg.com/maptalks.gridlayer/dist/maptalks.gridlayer.min.js"></script>
 <script>
-var data = [
-    [1, 2, { properties : { foo : 1, foo2 : 'foo' }, symbol : { polygonFill : '#f00' } }],
-    [[2, 4] , 5, { symbol : { polygonFill : '#f00' } }]
-];
+var grid = {
+    center : [0, 0],     // center of the grid
+    width  : 100,        // width of the grid cell
+    height : 100,        // height of the grid cell
+    projection : true,   // true|false, whether width and height is a projection value 
+    cols      : [1, Infinity],
+    rows      : [2, 5],
+    data   : [
+        //Each item is an array, arr[0] is cell idx on X axis, arr[1] is cell idx on Y axis, arr[2] is the data object, properties is data, symbol is cell style
+        [1, 2, { properties : { foo : 1, foo2 : 'foo' }, symbol : { ... } }],
+        //if arr[0] is an array, it means a range of cell on X axis, from cell[0][0] to cell [0][1]
+        [[2, 4] , 5, { symbo : {...} }] //[]
+    ]
+};
 var options = {
     symbol : {
         lineWidth : 2
@@ -60,29 +70,43 @@ new maptalks.GridLayer(id, data, options)
     * Other options defined in [maptalks.Layer](https://maptalks.github.io/docs/api/Layer.html)
 
 ```javascript
-// data format
-[
-    //[col, row, { properties : properties, symbol : symbol}]
-    //col: col_index or [beginIndex, endIndex]
-    //row: col_index or [beginIndex, endIndex]
-    // col is 1, row is 2
-    [1, 2, { properties : { foo : 1, foo2 : 'foo' }, symbol : { polygonFill : '#f00' } }],
-    //col is from 2 to 4 (3 columns), row is 5
-    [[2, 4] , 5, { symbol : { polygonFill : '#f00' } }],
-    //col is from 2 to 4 (3 columns), row is from 7 to 8 (2 rows)
-    [[2, 4] , [7, 8], { symbol : { polygonFill : '#f00' } }]
-]
+{
+    center : [0, 0],     // center of the grid
+    width  : 100,        // width of the grid cell
+    height : 100,        // height of the grid cell
+    projection : true,   // true|false, whether width and height is a projection value 
+    cols      : [1, Infinity],
+    rows      : [2, 5],
+    // data format
+    data : [
+        //[col, row, { properties : properties, symbol : symbol}]
+        //col: col_index or [beginIndex, endIndex]
+        //row: col_index or [beginIndex, endIndex]
+        // col is 1, row is 2
+        [1, 2, { properties : { foo : 1, foo2 : 'foo' }, symbol : { polygonFill : '#f00' } }],
+        //col is from 2 to 4 (3 columns), row is 5
+        [[2, 4] , 5, { symbol : { polygonFill : '#f00' } }],
+        //col is from 2 to 4 (3 columns), row is from 7 to 8 (2 rows)
+        [[2, 4] , [7, 8], { symbol : { polygonFill : '#f00' } }]
+    ]
+}
 ```
 
 ### `getGrid()`
 
-get layer's grid data
+get layer's grid value
 
 **Returns** `Object`
 
-### `setGrid(data)`
+### `setGrid(grid)`
 
-set a new echarts option to the layer
+set a new grid value to the layer
+
+* grid **Object** new grid value
+
+### `setGridData(data)`
+
+update layer's grid data
 
 * data **Array** set new data
 
