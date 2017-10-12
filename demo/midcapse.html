@@ -2,9 +2,9 @@
 <html>
 <head>
     <title>maptalks.GridLayer demo</title>
-    <script src="https://unpkg.com/maptalks/dist/maptalks.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/maptalks/dist/maptalks.min.js"></script>
     <script src="../dist/maptalks.gridlayer.js"></script>
-    <link type="text/css" rel="stylesheet" href="https://unpkg.com/maptalks/dist/maptalks.css">
+    <link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maptalks/dist/maptalks.css">
     <style>
         #map { width: 960px; height: 600px; }
     </style>
@@ -20,8 +20,8 @@
             'content' : '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         },
         baseLayer : new maptalks.TileLayer("tile",{
-            urlTemplate : 'http://{s}.tile.thunderforest.com/transport/{z}/{x}/{y}.png',
-            subdomains:['a','b','c']
+            urlTemplate: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
+            subdomains  : ['a','b','c','d']
         })
     });
 
