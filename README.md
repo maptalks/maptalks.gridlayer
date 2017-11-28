@@ -66,7 +66,6 @@ new maptalks.GridLayer(id, data, options)
 * data **Object** see data format below
 * options **Object** options
     * symbol **Object** symbol of the grid
-    * container **String** specify the container for layer dom elements: 'front' or 'back' ('front' by default)
     * Other options defined in [maptalks.Layer](https://maptalks.github.io/docs/api/Layer.html)
 
 ```javascript

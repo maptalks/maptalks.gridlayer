@@ -7,7 +7,9 @@ const testHelper = new TestHelper();
 const karmaConfig = require('./karma.config');
 
 gulp.task('build', () => {
-    return bundleHelper.bundle('index.js');
+    const options = bundleHelper.getDefaultRollupConfig();
+    options.globals = 'maptalks';
+    return bundleHelper.bundle('src/index.js');
 });
 
 gulp.task('minify', ['build'], () => {
@@ -15,7 +17,7 @@ gulp.task('minify', ['build'], () => {
 });
 
 gulp.task('watch', ['build'], () => {
-    gulp.watch(['index.js', './gulpfile.js'], ['build']);
+    gulp.watch(['src/**/*.js', './gulpfile.js'], ['build']);
 });
 
 gulp.task('test', ['build'], () => {
@@ -24,7 +26,7 @@ gulp.task('test', ['build'], () => {
 
 gulp.task('tdd', ['build'], () => {
     karmaConfig.singleRun = false;
-    gulp.watch(['index.js'], ['test']);
+    gulp.watch(['src/**/*.js'], ['test']);
     testHelper.test(karmaConfig);
 });
 
