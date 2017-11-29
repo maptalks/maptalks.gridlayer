@@ -97,9 +97,9 @@ describe('GridLayer', function () {
             renderer : 'canvas'
         });
         layer.on('layerload', function () {
-            var expected = { 'type':'Feature', 'geometry':{ 'type':'Polygon', 'coordinates':[[[0, 0], [0.0008983152841103206, 0], [0.0008983152842207313, -0.0008983152841103206], [0, -0.0008983152841103206], [0, 0]]] }, 'properties':null };
-            var actual = layer.identify(map.getCenter()).geometry.toGeoJSON();
-            expect(actual).to.be.eql(expected);
+            var expected = maptalks.Geometry.fromJSON({ 'type':'Feature', 'geometry':{ 'type':'Polygon', 'coordinates':[[[0, 0], [0.0008983152841103206, 0], [0.0008983152842207313, -0.0008983152841103206], [0, -0.0008983152841103206], [0, 0]]] }, 'properties':null });
+            var actual = layer.identify(map.getCenter()).geometry;
+            expect(actual.getCenter()).to.be.closeTo(expected.getCenter());
             done();
         })
         .addTo(map);
