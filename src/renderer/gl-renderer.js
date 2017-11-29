@@ -33,14 +33,15 @@ const dataGridShaders = {
         precision mediump float;
 
         attribute vec3 a_position;
-        attribute vec4 a_color;
+        attribute vec3 a_color;
+        attribute float a_opacity;
 
         varying vec4 v_color;
 
         uniform mat4 u_matrix;
 
         void main() {
-            v_color = a_color;
+            v_color = vec4(a_color, 1.0) * a_opacity;
             gl_Position = u_matrix * vec4(a_position, 1.0);
         }
     `,
@@ -76,7 +77,9 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         this.prepareCanvas();
         this._setCanvasStyle(this._compiledGridStyle);
         this._drawGrid();
-        this._drawData();
+        this._glDrawDataGrid();
+        this._drawGlCanvas();
+        this._drawAllLabels();
         this.completeRender();
     }
 
@@ -175,12 +178,6 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         this.program = this.dataGridProgram;
     }
 
-    _drawData() {
-        this._glDrawDataGrid();
-        this._drawGlCanvas();
-        this._drawAllLabels();
-    }
-
     _glDrawDataGrid() {
         const grid = this.layer.getGrid(),
             gridInfo = grid['unit'] === 'projection' ? this._getProjGridToDraw() : this._getGridToDraw(),
@@ -211,7 +208,7 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         this._updateUniforms();
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.dataGridBuffer);
-        this.enableVertexAttrib([['a_position', 3], ['a_color', 4]]);
+        this.enableVertexAttrib([['a_position', 3], ['a_color', 3], ['a_opacity', 1]]);
         if (vertices.length > 0) {
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
         }
