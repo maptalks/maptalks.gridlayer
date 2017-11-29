@@ -1,5 +1,5 @@
 /*!
- * maptalks.gridlayer v0.3.1
+ * maptalks.gridlayer v0.3.2
  * LICENSE : MIT
  * (c) 2016-2017 maptalks.org
  */
@@ -2814,7 +2814,7 @@ var shaders = {
 };
 
 var dataGridShaders = {
-    'vertexShader': '\n        precision mediump float;\n\n        attribute vec3 a_position;\n        attribute vec4 a_color;\n\n        varying vec4 v_color;\n\n        uniform mat4 u_matrix;\n\n        void main() {\n            v_color = a_color;\n            gl_Position = u_matrix * vec4(a_position, 1.0);\n        }\n    ',
+    'vertexShader': '\n        precision mediump float;\n\n        attribute vec3 a_position;\n        attribute vec3 a_color;\n        attribute float a_opacity;\n\n        varying vec4 v_color;\n\n        uniform mat4 u_matrix;\n\n        void main() {\n            v_color = vec4(a_color, 1.0) * a_opacity;\n            gl_Position = u_matrix * vec4(a_position, 1.0);\n        }\n    ',
     // fragment shader, can be replaced by layer.options.fragmentShader
     'fragmentShader': '\n        precision mediump float;\n\n        varying vec4 v_color;\n\n        void main() {\n            vec4 color = v_color;\n            // color = vec4(0.0, 0.0, 0.0, 1.0);\n            gl_FragColor = color;\n        }\n    '
 };
@@ -2844,7 +2844,9 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
         this.prepareCanvas();
         this._setCanvasStyle(this._compiledGridStyle);
         this._drawGrid();
-        this._drawData();
+        this._glDrawDataGrid();
+        this._drawGlCanvas();
+        this._drawAllLabels();
         this.completeRender();
     };
 
@@ -2943,12 +2945,6 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
         this.program = this.dataGridProgram;
     };
 
-    GridGLRenderer.prototype._drawData = function _drawData() {
-        this._glDrawDataGrid();
-        this._drawGlCanvas();
-        this._drawAllLabels();
-    };
-
     GridGLRenderer.prototype._glDrawDataGrid = function _glDrawDataGrid() {
         var _this2 = this;
 
@@ -2981,7 +2977,7 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
         this._updateUniforms();
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.dataGridBuffer);
-        this.enableVertexAttrib([['a_position', 3], ['a_color', 4]]);
+        this.enableVertexAttrib([['a_position', 3], ['a_color', 3], ['a_opacity', 1]]);
         if (vertices.length > 0) {
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
         }
@@ -3364,4 +3360,4 @@ GridLayer.mergeOptions({
 
 export { GridLayer };
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.3.1, requires maptalks@>=0.35.1.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.3.2, requires maptalks@>=0.35.1.');
