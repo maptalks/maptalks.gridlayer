@@ -1,10 +1,10 @@
 /*!
- * maptalks.gridlayer v0.3.0
+ * maptalks.gridlayer v0.3.1
  * LICENSE : MIT
  * (c) 2016-2017 maptalks.org
  */
 /*!
- * requires maptalks@>=0.26.2 
+ * requires maptalks@>=0.35.1 
  */
 import { Browser, Canvas, Coordinate, Extent, Layer, LineString, MapboxUtil, Point, PointExtent, Rectangle, Util, projection, renderer, symbolizer } from 'maptalks';
 
@@ -3364,4 +3364,4 @@ GridLayer.mergeOptions({
 
 export { GridLayer };
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.3.0, requires maptalks@>=0.26.2.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.3.1, requires maptalks@>=0.35.1.');
