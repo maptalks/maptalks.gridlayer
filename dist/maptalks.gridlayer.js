@@ -1,5 +1,5 @@
 /*!
- * maptalks.gridlayer v0.3.2
+ * maptalks.gridlayer v0.3.3
  * LICENSE : MIT
  * (c) 2016-2017 maptalks.org
  */
@@ -3363,6 +3363,6 @@ exports.GridLayer = GridLayer;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.3.2, requires maptalks@>=0.35.1.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.3.3, requires maptalks@>=0.35.1.');
 
 })));
