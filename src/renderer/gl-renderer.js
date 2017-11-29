@@ -248,17 +248,14 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         const style = Color(color).rgbaArrayNormalized();
         style[3] *= opacity;
 
-        const glScale = map.getGLScale();
-        const w = gridInfo.width * glScale,
-            h = gridInfo.height * glScale;
-
         let p1, p2, p3, p4;
         for (let i = cols[0]; i <= cols[1]; i++) {
             for (let ii = rows[0]; ii <= rows[1]; ii++) {
                 p1 = this._getCellNWPoint(i, ii, gridInfo, zoom);
-                p2 = p1.add(w, 0);
-                p3 = p1.add(w, h);
-                p4 = p1.add(0, h);
+                p3 = this._getCellNWPoint(i + 1, ii + 1, gridInfo, zoom);
+                p2 = p1.add(p3.x - p1.x, 0);
+                // p3 = p1.add(w, h);
+                p4 = p1.add(0, p3.y - p1.y);
                 const idx = c / 7;
                 indices.push(idx, idx + 1, idx + 2);
                 indices.push(idx, idx + 2, idx + 3);

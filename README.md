@@ -5,11 +5,13 @@
 
 GridLayer plugin for maptalks.js. A layer draws grids.
 
-![screenshot]()
+![screenshot](https://user-images.githubusercontent.com/13678919/33376245-ec78e626-d547-11e7-8280-ef4693d416fd.png)
 
 ## Examples
 
 * [Random square grids](https://maptalks.github.io/maptalks.gridlayer/demo/random.html).
+* [Customer analysis grid](https://maptalks.github.io/maptalks.gridlayer/demo/grid.html).
+* [1KM grid of rainfall forecast of 2017-06-07](https://maptalks.github.io/maptalks.gridlayer/demo/micapse.html).
 
 ## Install
   
