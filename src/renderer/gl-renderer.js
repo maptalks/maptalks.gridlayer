@@ -129,7 +129,6 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         }
 
         const count = (cols[1] - cols[0] + 1) * 6 + (rows[1] - rows[0] + 1) * 6;
-        console.log((cols[1] - cols[0] + 1) * (rows[1] - rows[0] + 1));
         const vertices = new Float32Array(count);
         let c = 0;
         const set = p => {
@@ -201,8 +200,6 @@ export default class GridGLRenderer extends GridCanvasRenderer {
                 c = this._drawDataGrid({ vertices, indices }, c, gridData, this._compiledSymbols[index], gridInfo);
             });
         }
-
-        console.log(data.length);
 
         if (!this.dataGridBuffer) {
             this.dataGridBuffer = this.createBuffer();
