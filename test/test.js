@@ -24,6 +24,8 @@ describe('GridLayer', function () {
             height : 100,
             cols : [-5, 5],
             rows : [-5, 5]
+        }, {
+            renderer : 'canvas'
         });
         layer.on('layerload', function () {
             expect(layer).to.be.painted();
@@ -40,6 +42,8 @@ describe('GridLayer', function () {
             height : 100,
             cols : [-5, 5],
             rows : [-5, 5]
+        }, {
+            renderer : 'canvas'
         });
         layer.once('layerload', function () {
             expect(layer).to.be.painted();
@@ -68,6 +72,7 @@ describe('GridLayer', function () {
             cols : [-5, 5],
             rows : [-5, 5]
         }, {
+            renderer : 'canvas',
             'symbol' : symbol
         });
         layer.on('layerload', function () {
@@ -88,6 +93,8 @@ describe('GridLayer', function () {
             data : [
                 [0, 0, { properties : 1 }]
             ]
+        }, {
+            renderer : 'canvas'
         });
         layer.on('layerload', function () {
             var expected = { 'type':'Feature', 'geometry':{ 'type':'Polygon', 'coordinates':[[[0, 0], [0.0008983152841103206, 0], [0.0008983152842207313, -0.0008983152841103206], [0, -0.0008983152841103206], [0, 0]]] }, 'properties':null };
@@ -108,6 +115,8 @@ describe('GridLayer', function () {
                 cols : [-5, 5],
                 rows : [-5, 5],
                 data : data
+            }, {
+                renderer : 'canvas'
             });
             layer.on('layerload', function () {
                 expect(layer).to.be.painted();

@@ -272,7 +272,7 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
             return map.pointToCoordinate(p);
         } else if (grid['unit'] === 'meter') {
             const center = new maptalks.Coordinate(grid.center);
-            return  map.locate(center, grid.width * (col + 1 / 2), grid.height * (row + 1 / 2));
+            return map.locate(center, grid.width * (col + 1 / 2), grid.height * (row + 1 / 2));
         } else if (grid['unit'] === 'degree') {
             const center = new maptalks.Coordinate(grid.center);
             return center.add(grid.width * (col + 1 / 2), grid.height * (row + 1 / 2));
@@ -287,20 +287,12 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
         if (!gridInfo || !Array.isArray(data) || !data.length) {
             return;
         }
-        if (!this._gridSymbolTests) {
-            this._gridSymbolTests = [];
-        }
         data.forEach((gridData, index) => {
             if (!gridData[2]['symbol']) {
                 return;
             }
             this._drawDataGrid(gridData, this._compiledSymbols[index], gridInfo);
-            if (maptalks.Util.isNil(this._gridSymbolTests[index])) {
-                this._gridSymbolTests[index] = this._testSymbol(gridData[2]['symbol']);
-            }
-            if (this._gridSymbolTests[index]) {
-                this._drawDataCenter(gridData, index, gridInfo);
-            }
+            this._drawLabel(gridData, index, gridInfo);
         });
     }
 
@@ -351,7 +343,16 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
         return false;
     }
 
-    _drawDataCenter(gridData, index, gridInfo) {
+    _drawLabel(gridData, index, gridInfo) {
+        if (!this._gridSymbolTests) {
+            this._gridSymbolTests = [];
+        }
+        if (maptalks.Util.isNil(this._gridSymbolTests[index])) {
+            this._gridSymbolTests[index] = this._testSymbol(gridData[2]['symbol']);
+        }
+        if (!this._gridSymbolTests[index]) {
+            return;
+        }
         const symbol = gridData[2]['symbol'];
         const map = this.getMap(),
             extent = map.getExtent();

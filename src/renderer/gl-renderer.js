@@ -20,10 +20,10 @@ const shaders = {
 
         uniform float u_opacity;
 
-        uniform vec3 u_color;
+        uniform vec4 u_color;
 
         void main() {
-            gl_FragColor = vec4(u_color, 1.0) * u_opacity;
+            gl_FragColor = u_color * u_opacity;
         }
     `
 };
@@ -151,18 +151,21 @@ export default class GridGLRenderer extends GridCanvasRenderer {
             this.gridBuffer = this.createBuffer();
         }
         const gl = this.gl;
+        gl.lineWidth(this._compiledGridStyle.lineWidth || 1);
 
         this._useGridProgram();
         this._updateUniforms();
 
         gl.uniform1f(this.program['u_opacity'], this._compiledGridStyle.lineOpacity || 1);
-        gl.uniform3fv(this.program['u_color'], Color(this._compiledGridStyle.lineColor || '#000').rgbaArrayNormalized());
+        const color = Color(this._compiledGridStyle.lineColor || '#000').rgbaArrayNormalized();
+        gl.uniform4fv(this.program['u_color'], color || [0, 0, 0, 1]);
 
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.gridBuffer);
         this.enableVertexAttrib(['a_position', 3]);
         gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
         gl.drawArrays(gl.LINES, 0, vertices.length / 3);
+        gl.lineWidth(1);
     }
 
     _useDataGridProgram() {
@@ -173,17 +176,20 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         this.program = this.dataGridProgram;
     }
 
-
     _drawData() {
+        this._glDrawDataGrid();
+        this._drawGlCanvas();
+        this._drawAllLabels();
+    }
+
+    _glDrawDataGrid() {
         const grid = this.layer.getGrid(),
             gridInfo = grid['unit'] === 'projection' ? this._getProjGridToDraw() : this._getGridToDraw(),
             data = grid['data'];
         if (!gridInfo || !Array.isArray(data) || !data.length) {
             return;
         }
-        if (!this._gridSymbolTests) {
-            this._gridSymbolTests = [];
-        }
+
         const vertices = [];
         const indices = [];
         if (!this.paintedGridNum) {
@@ -193,12 +199,6 @@ export default class GridGLRenderer extends GridCanvasRenderer {
                     return;
                 }
                 c = this._drawDataGrid({ vertices, indices }, c, gridData, this._compiledSymbols[index], gridInfo);
-                // if (maptalks.Util.isNil(this._gridSymbolTests[index])) {
-                //     this._gridSymbolTests[index] = this._testSymbol(gridData[2]['symbol']);
-                // }
-                // if (this._gridSymbolTests[index]) {
-                //     this._drawDataCenter(gridData, index, gridInfo);
-                // }
             });
         }
 
@@ -225,7 +225,6 @@ export default class GridGLRenderer extends GridCanvasRenderer {
             this.paintedGridNum = indices.length;
         }
         gl.drawElements(gl.TRIANGLES, this.paintedGridNum, gl.UNSIGNED_INT, 0);
-
     }
 
     _drawDataGrid({ vertices, indices }, c, gridData, symbol, gridInfo) {
@@ -255,17 +254,17 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         const style = Color(color).rgbaArrayNormalized();
         style[3] *= opacity;
 
+        const glScale = map.getGLScale();
+        const w = gridInfo.width * glScale,
+            h = gridInfo.height * glScale;
+
         let p1, p2, p3, p4;
         for (let i = cols[0]; i <= cols[1]; i++) {
             for (let ii = rows[0]; ii <= rows[1]; ii++) {
                 p1 = this._getCellNWPoint(i, ii, gridInfo, zoom);
-                p2 = this._getCellNWPoint(i + 1, ii, gridInfo, zoom);
-                p3 = this._getCellNWPoint(i + 1, ii + 1, gridInfo, zoom);
-                p4 = this._getCellNWPoint(i, ii + 1, gridInfo, zoom);
-                // gridExtent = new maptalks.PointExtent(p1.x, p1.y, p3.x, p3.y);
-                // if (!mapExtent.intersects(gridExtent)) {
-                //     continue;
-                // }
+                p2 = p1.add(w, 0);
+                p3 = p1.add(w, h);
+                p4 = p1.add(0, h);
                 const idx = c / 7;
                 indices.push(idx, idx + 1, idx + 2);
                 indices.push(idx, idx + 2, idx + 3);
@@ -283,63 +282,17 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         return c;
     }
 
-    _testSymbol(/* symbol */) {
-        // for (let i = symbolizers.length - 1; i >= 0; i--) {
-        //     if (symbolizers[i].test(symbol)) {
-        //         return true;
-        //     }
-        // }
-        return false;
-    }
 
-    _drawDataCenter(gridData, index, gridInfo) {
-        const symbol = gridData[2]['symbol'];
-        const map = this.getMap(),
-            extent = map.getExtent();
-        let dataMarkers = this._dataMarkers;
-        if (!dataMarkers) {
-            this._dataMarkers = dataMarkers = [];
-        }
-        const coordinates = [];
-        if (!Array.isArray(gridData[0]) && !Array.isArray(gridData[1])) {
-            const p = this._getCellCenter(gridData[0], gridData[1], gridInfo);
-            if (extent.contains(p)) {
-                coordinates.push(p);
-            }
-        } else {
-            const cols = Array.isArray(gridData[0]) ? gridData[0] : [gridData[0], gridData[0]],
-                rows = Array.isArray(gridData[1]) ? gridData[1] : [gridData[1], gridData[1]];
-            for (let i = cols[0]; i <= cols[1]; i++) {
-                for (let ii = rows[0]; ii <= rows[1]; ii++) {
-                    const p = this._getCellCenter(i, ii, gridInfo);
-                    if (extent.contains(p)) {
-                        coordinates.push(p);
-                    }
-                }
-            }
-        }
-
-        if (coordinates.length === 0) {
+    _drawAllLabels() {
+        const grid = this.layer.getGrid(),
+            gridInfo = grid['unit'] === 'projection' ? this._getProjGridToDraw() : this._getGridToDraw(),
+            data = grid['data'];
+        if (!gridInfo || !Array.isArray(data) || !data.length) {
             return;
         }
-        let line = dataMarkers[index];
-        if (!line) {
-            const lineSymbol = maptalks.Util.extend({}, symbol);
-            lineSymbol['markerPlacement'] = 'point';
-            lineSymbol['textPlacement'] = 'point';
-            lineSymbol['lineOpacity'] = 0;
-            lineSymbol['polygonOpacity'] = 0;
-            line = new maptalks.LineString(coordinates, {
-                'symbol' : lineSymbol,
-                'properties' : gridData[2]['properties'],
-                'debug' : this.layer.options['debug']
-            });
-            line._bindLayer(this.layer);
-            dataMarkers[index] = line;
-        } else {
-            line.setCoordinates(coordinates);
-        }
-        line._getPainter().paint();
+        data.forEach((gridData, index) => {
+            this._drawLabel(gridData, index, gridInfo);
+        });
     }
 
     onRemove() {
@@ -404,20 +357,17 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
     }
 
-    getCanvasImage() {
-        if (this.isCanvasUpdated()) {
-            const ctx = this.context;
-            if (maptalks.Browser.retina) {
-                ctx.save();
-                ctx.scale(1 / 2, 1 / 2);
-            }
-            // draw gl canvas on layer canvas
-            ctx.drawImage(this.glCanvas, 0, 0);
-            if (maptalks.Browser.retina) {
-                ctx.restore();
-            }
+    _drawGlCanvas() {
+        const ctx = this.context;
+        if (maptalks.Browser.retina) {
+            ctx.save();
+            ctx.scale(1 / 2, 1 / 2);
         }
-        return super.getCanvasImage();
+        // draw gl canvas on layer canvas
+        ctx.drawImage(this.glCanvas, 0, 0);
+        if (maptalks.Browser.retina) {
+            ctx.restore();
+        }
     }
 
     //----------------------- webgl utils unlike to change ---------------------------------

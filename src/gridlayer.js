@@ -107,10 +107,23 @@ export class GridLayer extends maptalks.Layer {
             // meters in projected coordinate system
             const projection = this.getGridProjection(),
                 pcenter = projection.project(center);
-            const xmin = pcenter.x + cols[0] * w,
+            let xmin = pcenter.x + cols[0] * w,
                 xmax = pcenter.x + cols[1] * w,
                 ymin = pcenter.y + cols[0] * h,
                 ymax = pcenter.y + cols[1] * h;
+            const fullExtent = map.getFullExtent();
+            if (xmin === -Infinity) {
+                xmin = fullExtent['xmin'] + 1;
+            }
+            if (xmax === Infinity) {
+                xmax = fullExtent['xmax'];
+            }
+            if (ymin === -Infinity) {
+                ymin = fullExtent['ymin'];
+            }
+            if (ymax === Infinity) {
+                ymax = fullExtent['ymax'];
+            }
             return new maptalks.Extent(xmin, ymin, xmax, ymax).convertTo(c => projection.unproject(c));
         } else if (grid['unit'] === 'meter') {
             // distance in geographic meters
@@ -219,6 +232,9 @@ export class GridLayer extends maptalks.Layer {
         }
 
         const startCell = this.getCellAt(coordinate);
+        if (!startCell) {
+            return;
+        }
         //根据与开始网格的距离对所有网格排序
         const sorted = data.sort((a, b) => {
             return Math.pow((a[0] - startCell[0]), 2) + Math.pow((a[1] - startCell[1]), 2) - Math.pow((b[0] - startCell[0]), 2) - Math.pow((b[1] - startCell[1]), 2);
