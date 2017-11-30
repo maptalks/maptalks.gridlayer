@@ -67,7 +67,8 @@ new maptalks.GridLayer(id, data, options)
 * id **String** layer id
 * data **Object** see data format below
 * options **Object** options
-    * symbol **Object** symbol of the grid
+    * renderer **String** renderer, canvas or gl, gl by default
+    * symbol **Object** symbol of the grid, supported properties: `lineWidth` (fixed to 1 in gl renderer on windows [due to ANGLE](https://bugs.chromium.org/p/angleproject/issues/detail?id=334)), `lineColor`, `polygonFill`, `polygonOpacity`
     * Other options defined in [maptalks.Layer](https://maptalks.github.io/docs/api/Layer.html)
 
 ```javascript
@@ -81,6 +82,7 @@ new maptalks.GridLayer(id, data, options)
     // data format
     data : [
         //[col, row, { properties : properties, symbol : symbol}]
+        //supported symbol properties : polygonFill, polygonOpacity
         //col: col_index or [beginIndex, endIndex]
         //row: col_index or [beginIndex, endIndex]
         // col is 1, row is 2
