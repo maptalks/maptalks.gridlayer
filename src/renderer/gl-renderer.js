@@ -309,18 +309,12 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         gl.deleteShader(program.vertexShader);
     }
 
-    // override TileLayerCanvasRenderer to initialize gl context
-    initContext() {
-        super.initContext();
+    // prepare gl, create program, create buffers and fill unchanged data: image samplers, texture coordinates
+    onCanvasCreate() {
         this.glCanvas = maptalks.Canvas.createCanvas(this.canvas.width, this.canvas.height);
         const gl = this.gl = this._createGLContext(this.glCanvas, this.layer.options['glOptions']);
         gl.clearColor(0.0, 0.0, 0.0, 0.0);
         gl.getExtension('OES_element_index_uint');
-    }
-
-    // prepare gl, create program, create buffers and fill unchanged data: image samplers, texture coordinates
-    onCanvasCreate() {
-        const gl = this.gl;
         gl.disable(gl.DEPTH_TEST);
         gl.disable(gl.STENCIL_TEST);
 
