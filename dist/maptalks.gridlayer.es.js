@@ -1,10 +1,10 @@
 /*!
- * maptalks.gridlayer v0.3.3
+ * maptalks.gridlayer v0.4.0
  * LICENSE : MIT
  * (c) 2016-2017 maptalks.org
  */
 /*!
- * requires maptalks@>=0.35.1 
+ * requires maptalks@>=0.36.0 
  */
 import { Browser, Canvas, Coordinate, Extent, Layer, LineString, MapboxUtil, Point, PointExtent, Rectangle, Util, projection, renderer, symbolizer } from 'maptalks';
 
@@ -3087,22 +3087,14 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
         gl.deleteShader(program.vertexShader);
     };
 
-    // override TileLayerCanvasRenderer to initialize gl context
-
-
-    GridGLRenderer.prototype.initContext = function initContext() {
-        _GridCanvasRenderer.prototype.initContext.call(this);
-        this.glCanvas = Canvas.createCanvas(this.canvas.width, this.canvas.height);
-        var gl = this.gl = this._createGLContext(this.glCanvas, this.layer.options['glOptions']);
-        gl.clearColor(0.0, 0.0, 0.0, 0.0);
-        gl.getExtension('OES_element_index_uint');
-    };
-
     // prepare gl, create program, create buffers and fill unchanged data: image samplers, texture coordinates
 
 
     GridGLRenderer.prototype.onCanvasCreate = function onCanvasCreate() {
-        var gl = this.gl;
+        this.glCanvas = Canvas.createCanvas(this.canvas.width, this.canvas.height);
+        var gl = this.gl = this._createGLContext(this.glCanvas, this.layer.options['glOptions']);
+        gl.clearColor(0.0, 0.0, 0.0, 0.0);
+        gl.getExtension('OES_element_index_uint');
         gl.disable(gl.DEPTH_TEST);
         gl.disable(gl.STENCIL_TEST);
 
@@ -3357,4 +3349,4 @@ GridLayer.mergeOptions({
 
 export { GridLayer };
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.3.3, requires maptalks@>=0.35.1.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.4.0, requires maptalks@>=0.36.0.');
