@@ -17,21 +17,25 @@ GridLayer plugin for maptalks.js. A layer draws grids.
   
 * Install with npm: ```npm install maptalks.gridlayer```. 
 * Download from [dist directory](https://github.com/maptalks/maptalks.gridlayer/tree/gh-pages/dist).
-* Use unpkg CDN: ```https://unpkg.com/maptalks.gridlayer/dist/maptalks.gridlayer.min.js```
+* Use unpkg CDN: ```https://cdn.jsdelivr.net/npm/maptalks.gridlayer/dist/maptalks.gridlayer.min.js```
 
 ## Usage
 
 As a plugin, `maptalks.gridlayer` must be loaded after `maptalks.js` in browsers.
 ```html
-<link rel="stylesheet" href="https://unpkg.com/maptalks/dist/maptalks.css">
-<script type="text/javascript" src="https://unpkg.com/maptalks/dist/maptalks.min.js"></script>
-<script type="text/javascript" src="https://unpkg.com/maptalks.gridlayer/dist/maptalks.gridlayer.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maptalks/dist/maptalks.css">
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/maptalks/dist/maptalks.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/maptalks.gridlayer/dist/maptalks.gridlayer.min.js"></script>
 <script>
 var grid = {
     center : [0, 0],     // center of the grid
     width  : 100,        // width of the grid cell
     height : 100,        // height of the grid cell
-    projection : true,   // true|false, whether width and height is a projection value 
+    // unit of cell width/height, possible values: 
+    //   * projection : projected coordinate
+    //   * meter : meters of geographic distance
+    //   * degree : longtitude/latitude dgrees
+    unit : 'projection',
     cols      : [1, Infinity],
     rows      : [2, 5],
     data   : [
