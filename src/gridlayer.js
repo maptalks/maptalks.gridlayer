@@ -83,14 +83,6 @@ export class GridLayer extends maptalks.Layer {
         return this.redraw();
     }
 
-    getGridProjection() {
-        if (this.options['projectionName']) {
-            return maptalks.projection[this.options['projectionName'].toUpperCase()];
-        } else {
-            return this.getMap().getProjection();
-        }
-    }
-
     /**
      * Get grid's geographic exteng
      * @return {Extent}
@@ -175,6 +167,12 @@ export class GridLayer extends maptalks.Layer {
         return null;
     }
 
+    /**
+     * Get cell's geometry
+     * @param {Number} col cell col
+     * @param {Number} row cell row
+     * @returns {maptalks.Geometry}
+     */
     getCellGeometry(col, row) {
         const map = this.getMap(),
             grid = this.getGrid();
@@ -200,9 +198,9 @@ export class GridLayer extends maptalks.Layer {
     }
 
     /**
-     * 变形虫
-     * @param  {Rect} startCell 开始网格
-     * @return {Array}  结果网格数组
+     * Visit data cells around given coordinate
+     * @param  {maptalks.Coordinate} coordinate
+     * @param {Function}  cb  callback function, parameter is [col, row, { properties, symbol }], return false to break the visiting
      */
     visitAround(coordinate, cb) {
         const grid = this.getGrid(),
@@ -247,6 +245,11 @@ export class GridLayer extends maptalks.Layer {
         }
     }
 
+    /**
+     * Return cell index and cell geometry at coordinate
+     * @param {maptalks.Coordinate} coordinate coordinate
+     * @returns {Object} { col : col, row : row, geometry : cellGeometry }
+     */
     identify(coordinate) {
         if (!coordinate) {
             return null;

@@ -123,6 +123,62 @@ update layer's grid data
 
 **Returns** `this`
 
+### `redraw()`
+
+redraw the layer
+
+**Returns** `this`
+
+### `isEmpty()`
+
+If the layer is empty
+
+**Returns** `Boolean`
+
+### `clear()`
+
+clear the layer
+
+**Returns** `this`
+
+### `getGridExtent()`
+
+Get grid's geographic extent
+
+**Returns** `maptalks.Extent`
+
+### `GetCellAt(coordinate)`
+
+Get cell index at coordinate
+
+* coordinate **maptalks.Coordinate** coordinate
+
+**Returns** `Number[]` [col, row]
+
+### `GetCellGeometry(col, row)`
+
+Get cell's geometry
+
+* col **Number** cell's col
+* row **Number** cell's row
+
+**Returns** `maptalks.Geometry` cell geometry
+
+### `VisitAround(coordinate, cb)`
+
+Visit data cells around given coordinate
+
+* coordinate **maptalks.Coordinate** coordinate
+* cb **Function** callback function, parameter is [col, row, { properties, symbol }]， return false to break the visiting
+
+### `identify(coordinate)`
+
+Return cell index and cell geometry at coordinate
+
+* coordinate **maptalks.Coordinate** coordinate
+
+**Returns** `Object` { col : col, row : row, geometry : cellGeometry }
+
 ### `toJSON()`
 
 export the GridLayer's JSON.
