@@ -34,7 +34,7 @@ var grid = {
     // unit of cell width/height, possible values: 
     //   * projection : projected coordinate
     //   * meter : meters of geographic distance
-    //   * degree : longtitude/latitude dgrees
+    //   * degree : longtitude/latitude degrees
     unit : 'projection',
     cols      : [1, Infinity],
     rows      : [2, 5],
@@ -83,7 +83,7 @@ new maptalks.GridLayer(id, data, options)
     // unit of cell width/height, possible values: 
     //   * projection : projected coordinate
     //   * meter : meters of geographic distance
-    //   * degree : longtitude/latitude dgrees
+    //   * degree : longtitude/latitude degrees
     unit   : 'projection',   
     cols      : [1, Infinity],
     rows      : [2, 5],
