@@ -83,6 +83,14 @@ export class GridLayer extends maptalks.Layer {
         return this.redraw();
     }
 
+    getGridProjection() {
+        if (this.options['projectionName']) {
+            return maptalks.projection[this.options['projectionName'].toUpperCase()];
+        } else {
+            return this.getMap().getProjection();
+        }
+    }
+
     /**
      * Get grid's geographic exteng
      * @return {Extent}
