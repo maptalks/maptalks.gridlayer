@@ -76,7 +76,11 @@ new maptalks.GridLayer(id, data, options)
     center : [0, 0],     // center of the grid
     width  : 100,        // width of the grid cell
     height : 100,        // height of the grid cell
-    projection : true,   // true|false, whether width and height is a projection value 
+    // unit of cell width/height, possible values: 
+    //   * projection : projected coordinate
+    //   * meter : meters of geographic distance
+    //   * degree : longtitude/latitude dgrees
+    unit   : 'projection',   
     cols      : [1, Infinity],
     rows      : [2, 5],
     // data format
