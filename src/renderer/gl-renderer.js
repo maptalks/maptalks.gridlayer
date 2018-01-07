@@ -60,13 +60,6 @@ const dataGridShaders = {
 };
 
 export default class GridGLRenderer extends GridCanvasRenderer {
-    needToRedraw() {
-        const map = this.getMap();
-        if (!map.getPitch() && map.isZooming()) {
-            return false;
-        }
-        return super.needToRedraw();
-    }
 
     draw() {
         const grid = this.layer.getGrid();
@@ -309,10 +302,11 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         gl.deleteShader(program.vertexShader);
     }
 
-    // prepare gl, create program, create buffers and fill unchanged data: image samplers, texture coordinates
     onCanvasCreate() {
-        this.glCanvas = maptalks.Canvas.createCanvas(this.canvas.width, this.canvas.height);
-        const gl = this.gl = this._createGLContext(this.glCanvas, this.layer.options['glOptions']);
+        //create a canvas2 to draw grids with webgl
+        //texts will be still drawn by (this.canvas + this.context)
+        this.canvas2 = maptalks.Canvas.createCanvas(this.canvas.width, this.canvas.height);
+        const gl = this.gl = this._createGLContext(this.canvas2, this.layer.options['glOptions']);
         gl.clearColor(0.0, 0.0, 0.0, 0.0);
         gl.getExtension('OES_element_index_uint');
         gl.disable(gl.DEPTH_TEST);
@@ -327,9 +321,9 @@ export default class GridGLRenderer extends GridCanvasRenderer {
             return;
         }
         super.resizeCanvas(canvasSize);
-        if (this.glCanvas.width !== this.canvas.width || this.glCanvas.height !== this.canvas.height) {
-            this.glCanvas.width = this.canvas.width;
-            this.glCanvas.height = this.canvas.height;
+        if (this.canvas2.width !== this.canvas.width || this.canvas2.height !== this.canvas.height) {
+            this.canvas2.width = this.canvas.width;
+            this.canvas2.height = this.canvas.height;
             this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
         }
     }
@@ -349,7 +343,7 @@ export default class GridGLRenderer extends GridCanvasRenderer {
             ctx.scale(1 / 2, 1 / 2);
         }
         // draw gl canvas on layer canvas
-        ctx.drawImage(this.glCanvas, 0, 0);
+        ctx.drawImage(this.canvas2, 0, 0);
         if (maptalks.Browser.retina) {
             ctx.restore();
         }
