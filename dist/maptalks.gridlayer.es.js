@@ -1,5 +1,5 @@
 /*!
- * maptalks.gridlayer v0.4.1
+ * maptalks.gridlayer v0.4.2
  * LICENSE : MIT
  * (c) 2016-2018 maptalks.org
  */
@@ -11,7 +11,7 @@ import { Browser, Canvas, Coordinate, Extent, Layer, LineString, MapboxUtil, Poi
 function getCellPointSize(layer, grid) {
     var projection$$1 = layer.getGridProjection(),
         map = layer.getMap(),
-        gridCenter = new maptalks.Coordinate(grid.center),
+        gridCenter = new Coordinate(grid.center),
         center = map.coordinateToPoint(gridCenter),
         target = projection$$1.project(gridCenter)._add(grid.width, grid.height),
         ptarget = map._prjToPoint(target),
@@ -3352,4 +3352,4 @@ GridLayer.mergeOptions({
 
 export { GridLayer };
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.4.1, requires maptalks@>=0.36.0.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.4.2, requires maptalks@>=0.36.0.');

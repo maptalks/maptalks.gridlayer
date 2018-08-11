@@ -1,5 +1,5 @@
 /*!
- * maptalks.gridlayer v0.4.1
+ * maptalks.gridlayer v0.4.2
  * LICENSE : MIT
  * (c) 2016-2018 maptalks.org
  */
@@ -10,7 +10,7 @@
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('maptalks')) :
 	typeof define === 'function' && define.amd ? define(['exports', 'maptalks'], factory) :
 	(factory((global.maptalks = global.maptalks || {}),global.maptalks));
-}(this, (function (exports,maptalks$1) { 'use strict';
+}(this, (function (exports,maptalks) { 'use strict';
 
 function getCellPointSize(layer, grid) {
     var projection$$1 = layer.getGridProjection(),
@@ -103,7 +103,7 @@ var possibleConstructorReturn = function (self, call) {
 };
 
 var options = {
-    'symbol': maptalks$1.Util.extend({}, defaultSymbol),
+    'symbol': maptalks.Util.extend({}, defaultSymbol),
     'debug': false
 };
 
@@ -192,7 +192,7 @@ var GridLayer = function (_maptalks$Layer) {
 
     GridLayer.prototype.getGridProjection = function getGridProjection() {
         if (this.options['projectionName']) {
-            return maptalks$1.projection[this.options['projectionName'].toUpperCase()];
+            return maptalks.projection[this.options['projectionName'].toUpperCase()];
         } else {
             return this.getMap().getProjection();
         }
@@ -206,7 +206,7 @@ var GridLayer = function (_maptalks$Layer) {
 
     GridLayer.prototype.getGridExtent = function getGridExtent() {
         var grid = this.getGrid(),
-            center = new maptalks$1.Coordinate(grid.center),
+            center = new maptalks.Coordinate(grid.center),
             map = this.getMap(),
             w = grid.width,
             h = grid.height,
@@ -233,18 +233,18 @@ var GridLayer = function (_maptalks$Layer) {
             if (ymax === Infinity) {
                 ymax = fullExtent['ymax'];
             }
-            return new maptalks$1.Extent(xmin, ymin, xmax, ymax).convertTo(function (c) {
+            return new maptalks.Extent(xmin, ymin, xmax, ymax).convertTo(function (c) {
                 return projection$$1.unproject(c);
             });
         } else if (grid['unit'] === 'meter') {
             // distance in geographic meters
             var sw = map.locate(center, -w * cols[0], -h * rows[0]),
                 ne = map.locate(center, w * cols[1], h * rows[1]);
-            return new maptalks$1.Extent(sw, ne);
+            return new maptalks.Extent(sw, ne);
         } else if (grid['unit'] === 'degree') {
             var _sw = center.add(w * cols[0], h * rows[0]),
                 _ne = center.add(w * cols[1], h * rows[1]);
-            return new maptalks$1.Extent(_sw, _ne);
+            return new maptalks.Extent(_sw, _ne);
         }
         return null;
     };
@@ -264,7 +264,7 @@ var GridLayer = function (_maptalks$Layer) {
         if (!extent.contains(coordinate)) {
             return null;
         }
-        var gridCenter = new maptalks$1.Coordinate(grid.center);
+        var gridCenter = new maptalks.Coordinate(grid.center);
         if (grid['unit'] === 'projection') {
             var center = map.coordinateToPoint(gridCenter),
                 size = getCellPointSize(this, grid);
@@ -273,9 +273,9 @@ var GridLayer = function (_maptalks$Layer) {
                 row = Math.floor((p.y - center.y) / size[0]);
             return [col, row];
         } else if (grid['unit'] === 'meter') {
-            var distX = map.computeLength(new maptalks$1.Coordinate(coordinate.x, gridCenter.y), gridCenter),
+            var distX = map.computeLength(new maptalks.Coordinate(coordinate.x, gridCenter.y), gridCenter),
                 _col = Math.floor(distX / grid.width);
-            var distY = map.computeLength(new maptalks$1.Coordinate(gridCenter.x, coordinate.y), gridCenter),
+            var distY = map.computeLength(new maptalks.Coordinate(gridCenter.x, coordinate.y), gridCenter),
                 _row = Math.floor(distY / grid.height);
             return [_col, _row];
         } else if (grid['unit'] === 'degree') {
@@ -299,7 +299,7 @@ var GridLayer = function (_maptalks$Layer) {
     GridLayer.prototype.getCellGeometry = function getCellGeometry(col, row) {
         var map = this.getMap(),
             grid = this.getGrid();
-        var gridCenter = new maptalks$1.Coordinate(grid.center);
+        var gridCenter = new maptalks.Coordinate(grid.center);
         if (grid['unit'] === 'projection') {
             var center = map.coordinateToPoint(gridCenter),
                 size = getCellPointSize(this, grid),
@@ -311,7 +311,7 @@ var GridLayer = function (_maptalks$Layer) {
                 sw = map.pointToCoordinate(cnw.add(0, height));
             var w = map.computeLength(nw, ne),
                 h = map.computeLength(nw, sw);
-            return new maptalks$1.Rectangle(nw, w, h);
+            return new maptalks.Rectangle(nw, w, h);
         } else if (grid['unit'] === 'meter') {
             return null;
         } else if (grid['unit'] === 'degree') {
@@ -402,7 +402,7 @@ var GridLayer = function (_maptalks$Layer) {
 
     GridLayer.prototype.toJSON = function toJSON() {
         var grid = this.getGrid();
-        if (grid['center'] instanceof maptalks$1.Coordinate) {
+        if (grid['center'] instanceof maptalks.Coordinate) {
             grid['center'] = grid['center'].toArray();
         }
         return {
@@ -431,13 +431,13 @@ var GridLayer = function (_maptalks$Layer) {
     };
 
     return GridLayer;
-}(maptalks$1.Layer);
+}(maptalks.Layer);
 
 GridLayer.mergeOptions(options);
 
 GridLayer.registerJSONType('GridLayer');
 
-var symbolizers = [maptalks$1.symbolizer.ImageMarkerSymbolizer, maptalks$1.symbolizer.TextMarkerSymbolizer, maptalks$1.symbolizer.VectorMarkerSymbolizer, maptalks$1.symbolizer.VectorPathMarkerSymbolizer];
+var symbolizers = [maptalks.symbolizer.ImageMarkerSymbolizer, maptalks.symbolizer.TextMarkerSymbolizer, maptalks.symbolizer.VectorMarkerSymbolizer, maptalks.symbolizer.VectorPathMarkerSymbolizer];
 
 var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
     inherits(GridCanvasRenderer, _maptalks$renderer$Ca);
@@ -479,11 +479,11 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
         }
         var resources = [];
         if (this._compiledGridStyle) {
-            resources = maptalks$1.Util.getExternalResources(this._compiledGridStyle);
+            resources = maptalks.Util.getExternalResources(this._compiledGridStyle);
         }
         if (this._compiledSymbols) {
             this._compiledSymbols.forEach(function (s) {
-                var c = maptalks$1.Util.getExternalResources(s);
+                var c = maptalks.Util.getExternalResources(s);
                 if (c) {
                     resources = resources.concat(c);
                 }
@@ -500,8 +500,8 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
         var _this2 = this;
 
         if (!this._compiledGridStyle) {
-            var symbol = maptalks$1.Util.convertResourceUrl(this.layer.options['symbol']);
-            this._compiledGridStyle = maptalks$1.MapboxUtil.loadFunctionTypes(symbol, function () {
+            var symbol = maptalks.Util.convertResourceUrl(this.layer.options['symbol']);
+            this._compiledGridStyle = maptalks.MapboxUtil.loadFunctionTypes(symbol, function () {
                 return [_this2.getMap() ? _this2.getMap().getZoom() : null, null];
             });
         }
@@ -520,8 +520,8 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
                             return [map.getZoom(), props];
                         };
                     }(gridData[2]['properties']);
-                    var s = maptalks$1.Util.convertResourceUrl(gridData[2]['symbol']);
-                    _this2._compiledSymbols[index] = maptalks$1.MapboxUtil.loadFunctionTypes(s, argFn);
+                    var s = maptalks.Util.convertResourceUrl(gridData[2]['symbol']);
+                    _this2._compiledSymbols[index] = maptalks.MapboxUtil.loadFunctionTypes(s, argFn);
                 });
             }
         }
@@ -545,9 +545,9 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
             this.context.rect(p0.x, p0.y, p2.x - p0.x, p2.y - p0.y);
             this.context.fillStyle = this._compiledGridStyle.lineColor;
             if (this._compiledGridStyle['polygonOpacity'] > 0) {
-                maptalks$1.Canvas.fillCanvas(this.context, this._compiledGridStyle['polygonOpacity'], p0.x, p0.y);
+                maptalks.Canvas.fillCanvas(this.context, this._compiledGridStyle['polygonOpacity'], p0.x, p0.y);
             } else {
-                maptalks$1.Canvas.fillCanvas(this.context, 1, p0.x, p0.y);
+                maptalks.Canvas.fillCanvas(this.context, 1, p0.x, p0.y);
             }
             if (width < 0.5 || height < 0.5) {
                 return null;
@@ -585,7 +585,7 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
             this.context.moveTo(p1.x, p1.y);
             this.context.lineTo(p2.x, p2.y);
         }
-        maptalks$1.Canvas._stroke(this.context, this._compiledGridStyle['lineOpacity'], p0.x, p0.y);
+        maptalks.Canvas._stroke(this.context, this._compiledGridStyle['lineOpacity'], p0.x, p0.y);
     };
 
     GridCanvasRenderer.prototype._getProjGridToDraw = function _getProjGridToDraw() {
@@ -596,12 +596,12 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
         extent = map._get2DExtent(),
             gridX = grid.cols || [-Infinity, Infinity],
             gridY = grid.rows || [-Infinity, Infinity],
-            gridCenter = new maptalks$1.Coordinate(grid.center),
+            gridCenter = new maptalks.Coordinate(grid.center),
             center = map.coordinateToPoint(gridCenter),
             size = getCellPointSize(this.layer, grid),
             width = size[0],
             height = size[1];
-        var gridExtent = new maptalks$1.PointExtent(center.x + gridX[0] * width, center.y + gridY[0] * height, center.x + gridX[1] * width, center.y + gridY[1] * height);
+        var gridExtent = new maptalks.PointExtent(center.x + gridX[0] * width, center.y + gridY[0] * height, center.x + gridX[1] * width, center.y + gridY[1] * height);
         var intersection = extent.intersection(gridExtent);
         if (!intersection) {
             return null;
@@ -624,7 +624,7 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
 
         // projection = map.getProjection(),
         extent = map.getExtent(),
-            gridCenter = new maptalks$1.Coordinate(grid.center),
+            gridCenter = new maptalks.Coordinate(grid.center),
             gridExtent = this.layer.getGridExtent(),
             w = grid.width,
             h = grid.height;
@@ -637,10 +637,10 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
         var cols = void 0,
             rows = void 0;
         if (grid['unit'] === 'meter') {
-            var dx1 = map.computeLength(new maptalks$1.Coordinate(intersection.xmin, gridCenter.y), gridCenter),
-                dx2 = map.computeLength(new maptalks$1.Coordinate(intersection.xmax, gridCenter.y), gridCenter);
-            var dy1 = map.computeLength(new maptalks$1.Coordinate(gridCenter.y, intersection.ymin), gridCenter),
-                dy2 = map.computeLength(new maptalks$1.Coordinate(intersection.ymax, gridCenter.y), gridCenter);
+            var dx1 = map.computeLength(new maptalks.Coordinate(intersection.xmin, gridCenter.y), gridCenter),
+                dx2 = map.computeLength(new maptalks.Coordinate(intersection.xmax, gridCenter.y), gridCenter);
+            var dy1 = map.computeLength(new maptalks.Coordinate(gridCenter.y, intersection.ymin), gridCenter),
+                dy2 = map.computeLength(new maptalks.Coordinate(intersection.ymax, gridCenter.y), gridCenter);
             cols = [-Math.ceil(dx1 / grid.width), Math.ceil(dx2 / grid.width)];
             rows = [-Math.ceil(dy1 / grid.height), Math.ceil(dy2 / grid.height)];
         } else if (grid['unit'] === 'degree') {
@@ -659,14 +659,14 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
         var map = this.getMap(),
             grid = this.layer.getGrid();
         if (grid['unit'] === 'projection') {
-            var p = new maptalks$1.Point(gridInfo.center.x + col * gridInfo.width, gridInfo.center.y + row * gridInfo.height);
+            var p = new maptalks.Point(gridInfo.center.x + col * gridInfo.width, gridInfo.center.y + row * gridInfo.height);
             return map._pointToPointAtZoom(p, targetZ);
         } else if (grid['unit'] === 'meter') {
-            var center = new maptalks$1.Coordinate(grid.center);
+            var center = new maptalks.Coordinate(grid.center);
             var target = map.locate(center, grid.width * col, grid.height * row);
             return map.coordToPoint(target, targetZ);
         } else if (grid['unit'] === 'degree') {
-            var _center = new maptalks$1.Coordinate(grid.center);
+            var _center = new maptalks.Coordinate(grid.center);
             var _target = _center.add(col * grid.width, row * grid.height);
             return map.coordToPoint(_target, targetZ);
         }
@@ -682,13 +682,13 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
         var grid = this.layer.getGrid(),
             map = this.getMap();
         if (grid['unit'] === 'projection') {
-            var p = new maptalks$1.Point(gridInfo.center.x + (col + 1 / 2) * gridInfo.width, gridInfo.center.y + (row + 1 / 2) * gridInfo.height);
+            var p = new maptalks.Point(gridInfo.center.x + (col + 1 / 2) * gridInfo.width, gridInfo.center.y + (row + 1 / 2) * gridInfo.height);
             return map.pointToCoordinate(p);
         } else if (grid['unit'] === 'meter') {
-            var center = new maptalks$1.Coordinate(grid.center);
+            var center = new maptalks.Coordinate(grid.center);
             return map.locate(center, grid.width * (col + 1 / 2), grid.height * (row + 1 / 2));
         } else if (grid['unit'] === 'degree') {
-            var _center2 = new maptalks$1.Coordinate(grid.center);
+            var _center2 = new maptalks.Coordinate(grid.center);
             return _center2.add(grid.width * (col + 1 / 2), grid.height * (row + 1 / 2));
         }
         return null;
@@ -731,7 +731,7 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
                 p2 = this._getCellNW(i + 1, ii, gridInfo);
                 p3 = this._getCellNW(i + 1, ii + 1, gridInfo);
                 p4 = this._getCellNW(i, ii + 1, gridInfo);
-                gridExtent = new maptalks$1.PointExtent(p1.x, p1.y, p3.x, p3.y);
+                gridExtent = new maptalks.PointExtent(p1.x, p1.y, p3.x, p3.y);
                 // marker as an invalid grid if width or height is abnormally large, due to containerPoint conversion
                 if (gridExtent.getWidth() > 1E4 || gridExtent.getHeight() > 1E4 || !mapExtent.intersects(gridExtent)) {
                     continue;
@@ -749,8 +749,8 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
             }
         }
         if (painted) {
-            maptalks$1.Canvas.fillCanvas(ctx, symbol['polygonOpacity'], p0.x, p0.y);
-            maptalks$1.Canvas._stroke(ctx, symbol['lineOpacity']);
+            maptalks.Canvas.fillCanvas(ctx, symbol['polygonOpacity'], p0.x, p0.y);
+            maptalks.Canvas._stroke(ctx, symbol['lineOpacity']);
         }
     };
 
@@ -767,7 +767,7 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
         if (!this._gridSymbolTests) {
             this._gridSymbolTests = [];
         }
-        if (maptalks$1.Util.isNil(this._gridSymbolTests[index])) {
+        if (maptalks.Util.isNil(this._gridSymbolTests[index])) {
             this._gridSymbolTests[index] = this._testSymbol(gridData[2]['symbol']);
         }
         if (!this._gridSymbolTests[index]) {
@@ -804,12 +804,12 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
         }
         var line = dataMarkers[index];
         if (!line) {
-            var lineSymbol = maptalks$1.Util.extend({}, symbol);
+            var lineSymbol = maptalks.Util.extend({}, symbol);
             lineSymbol['markerPlacement'] = 'point';
             lineSymbol['textPlacement'] = 'point';
             lineSymbol['lineOpacity'] = 0;
             lineSymbol['polygonOpacity'] = 0;
-            line = new maptalks$1.LineString(coordinates, {
+            line = new maptalks.LineString(coordinates, {
                 'symbol': lineSymbol,
                 'properties': gridData[2]['properties'],
                 'debug': this.layer.options['debug']
@@ -823,8 +823,8 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
     };
 
     GridCanvasRenderer.prototype._setCanvasStyle = function _setCanvasStyle(symbol) {
-        var s = maptalks$1.Util.extend({}, defaultSymbol, symbol);
-        maptalks$1.Canvas.prepareCanvas(this.context, s, this._resources);
+        var s = maptalks.Util.extend({}, defaultSymbol, symbol);
+        maptalks.Canvas.prepareCanvas(this.context, s, this._resources);
     };
 
     GridCanvasRenderer.prototype.onRemove = function onRemove() {
@@ -835,7 +835,7 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
     };
 
     return GridCanvasRenderer;
-}(maptalks$1.renderer.CanvasRenderer);
+}(maptalks.renderer.CanvasRenderer);
 
 function createCommonjsModule(fn, module) {
 	return module = { exports: {} }, fn(module, module.exports), module.exports;
@@ -2875,7 +2875,7 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
         var target = map.locate(center, altitude, 0);
         var p0 = map.coordToPoint(center, z),
             p1 = map.coordToPoint(target, z);
-        return Math.abs(p1.x - p0.x) * maptalks$1.Util.sign(altitude);
+        return Math.abs(p1.x - p0.x) * maptalks.Util.sign(altitude);
     };
 
     GridGLRenderer.prototype._updateUniforms = function _updateUniforms() {
@@ -3101,7 +3101,7 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
     GridGLRenderer.prototype.onCanvasCreate = function onCanvasCreate() {
         //create a canvas2 to draw grids with webgl
         //texts will be still drawn by (this.canvas + this.context)
-        this.canvas2 = maptalks$1.Canvas.createCanvas(this.canvas.width, this.canvas.height);
+        this.canvas2 = maptalks.Canvas.createCanvas(this.canvas.width, this.canvas.height);
         var gl = this.gl = this._createGLContext(this.canvas2, this.layer.options['glOptions']);
         gl.clearColor(0.0, 0.0, 0.0, 0.0);
         gl.getExtension('OES_element_index_uint');
@@ -3134,13 +3134,13 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
 
     GridGLRenderer.prototype._drawGlCanvas = function _drawGlCanvas() {
         var ctx = this.context;
-        if (maptalks$1.Browser.retina) {
+        if (maptalks.Browser.retina) {
             ctx.save();
             ctx.scale(1 / 2, 1 / 2);
         }
         // draw gl canvas on layer canvas
         ctx.drawImage(this.canvas2, 0, 0);
-        if (maptalks$1.Browser.retina) {
+        if (maptalks.Browser.retina) {
             ctx.restore();
         }
     };
@@ -3337,7 +3337,7 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
 GridGLRenderer.include({
 
     copy16: function () {
-        var m = maptalks$1.Browser.ie9 ? null : new Float32Array(16);
+        var m = maptalks.Browser.ie9 ? null : new Float32Array(16);
         return function (arr) {
             for (var i = 0; i < 16; i++) {
                 m[i] = arr[i];
@@ -3358,6 +3358,6 @@ exports.GridLayer = GridLayer;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.4.1, requires maptalks@>=0.36.0.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.4.2, requires maptalks@>=0.36.0.');
 
 })));
