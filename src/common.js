@@ -1,7 +1,9 @@
+import { Coordinate } from 'maptalks';
+
 export function getCellPointSize(layer, grid) {
     const projection = layer.getGridProjection(),
         map = layer.getMap(),
-        gridCenter = new maptalks.Coordinate(grid.center),
+        gridCenter = new Coordinate(grid.center),
         center = map.coordinateToPoint(gridCenter),
         target = projection.project(gridCenter)._add(grid.width, grid.height),
         ptarget = map._prjToPoint(target),
