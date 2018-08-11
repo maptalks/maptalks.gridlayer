@@ -1,7 +1,7 @@
 /*!
- * maptalks.gridlayer v0.4.0
+ * maptalks.gridlayer v0.4.1
  * LICENSE : MIT
- * (c) 2016-2017 maptalks.org
+ * (c) 2016-2018 maptalks.org
  */
 /*!
  * requires maptalks@>=0.36.0 
@@ -284,6 +284,14 @@ var GridLayer = function (_maptalks$Layer) {
         return null;
     };
 
+    /**
+     * Get cell's geometry
+     * @param {Number} col cell col
+     * @param {Number} row cell row
+     * @returns {maptalks.Geometry}
+     */
+
+
     GridLayer.prototype.getCellGeometry = function getCellGeometry(col, row) {
         var map = this.getMap(),
             grid = this.getGrid();
@@ -309,9 +317,9 @@ var GridLayer = function (_maptalks$Layer) {
     };
 
     /**
-     * 变形虫
-     * @param  {Rect} startCell 开始网格
-     * @return {Array}  结果网格数组
+     * Visit data cells around given coordinate
+     * @param  {maptalks.Coordinate} coordinate
+     * @param {Function}  cb  callback function, parameter is [col, row, { properties, symbol }], return false to break the visiting
      */
 
 
@@ -357,6 +365,13 @@ var GridLayer = function (_maptalks$Layer) {
             }
         }
     };
+
+    /**
+     * Return cell index and cell geometry at coordinate
+     * @param {maptalks.Coordinate} coordinate coordinate
+     * @returns {Object} { col : col, row : row, geometry : cellGeometry }
+     */
+
 
     GridLayer.prototype.identify = function identify(coordinate) {
         if (!coordinate) {
@@ -2827,14 +2842,6 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
         return possibleConstructorReturn(this, _GridCanvasRenderer.apply(this, arguments));
     }
 
-    GridGLRenderer.prototype.needToRedraw = function needToRedraw() {
-        var map = this.getMap();
-        if (!map.getPitch() && map.isZooming()) {
-            return false;
-        }
-        return _GridCanvasRenderer.prototype.needToRedraw.call(this);
-    };
-
     GridGLRenderer.prototype.draw = function draw() {
         var grid = this.layer.getGrid();
         if (!grid) {
@@ -3087,12 +3094,11 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
         gl.deleteShader(program.vertexShader);
     };
 
-    // prepare gl, create program, create buffers and fill unchanged data: image samplers, texture coordinates
-
-
     GridGLRenderer.prototype.onCanvasCreate = function onCanvasCreate() {
-        this.glCanvas = Canvas.createCanvas(this.canvas.width, this.canvas.height);
-        var gl = this.gl = this._createGLContext(this.glCanvas, this.layer.options['glOptions']);
+        //create a canvas2 to draw grids with webgl
+        //texts will be still drawn by (this.canvas + this.context)
+        this.canvas2 = Canvas.createCanvas(this.canvas.width, this.canvas.height);
+        var gl = this.gl = this._createGLContext(this.canvas2, this.layer.options['glOptions']);
         gl.clearColor(0.0, 0.0, 0.0, 0.0);
         gl.getExtension('OES_element_index_uint');
         gl.disable(gl.DEPTH_TEST);
@@ -3107,9 +3113,9 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
             return;
         }
         _GridCanvasRenderer.prototype.resizeCanvas.call(this, canvasSize);
-        if (this.glCanvas.width !== this.canvas.width || this.glCanvas.height !== this.canvas.height) {
-            this.glCanvas.width = this.canvas.width;
-            this.glCanvas.height = this.canvas.height;
+        if (this.canvas2.width !== this.canvas.width || this.canvas2.height !== this.canvas.height) {
+            this.canvas2.width = this.canvas.width;
+            this.canvas2.height = this.canvas.height;
             this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
         }
     };
@@ -3129,7 +3135,7 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
             ctx.scale(1 / 2, 1 / 2);
         }
         // draw gl canvas on layer canvas
-        ctx.drawImage(this.glCanvas, 0, 0);
+        ctx.drawImage(this.canvas2, 0, 0);
         if (Browser.retina) {
             ctx.restore();
         }
@@ -3337,16 +3343,13 @@ GridGLRenderer.include({
     }()
 });
 
-// import * as maptalks from 'maptalks';
 GridLayer.registerRenderer('canvas', GridCanvasRenderer);
 GridLayer.registerRenderer('gl', GridGLRenderer);
 
 GridLayer.mergeOptions({
-    'renderer': function () {
-        return maptalks.Browser.webgl ? 'gl' : 'canvas';
-    }()
+    'renderer': 'gl'
 });
 
 export { GridLayer };
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.4.0, requires maptalks@>=0.36.0.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.4.1, requires maptalks@>=0.36.0.');
