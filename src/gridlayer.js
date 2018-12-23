@@ -40,6 +40,7 @@ export class GridLayer extends maptalks.Layer {
         if (!grid['unit']) {
             grid['unit'] = 'projection';
         }
+        this._gridCenter = grid.center.slice(0);
         this._grid = grid;
     }
 
@@ -48,6 +49,14 @@ export class GridLayer extends maptalks.Layer {
      * @return {[type]} [description]
      */
     getGrid() {
+        let offset = this._grid['offset'];
+        if (offset) {
+            if (maptalks.Util.isFunction(offset)) {
+                offset = offset();
+            }
+            this._grid.center[0] = this._gridCenter[0] + offset[0];
+            this._grid.center[1] = this._gridCenter[1] + offset[1];
+        }
         return this._grid;
     }
 
