@@ -1,5 +1,5 @@
 /*!
- * maptalks.gridlayer v0.4.2
+ * maptalks.gridlayer v0.5.0
  * LICENSE : MIT
  * (c) 2016-2018 maptalks.org
  */
@@ -144,6 +144,10 @@ var GridLayer = function (_maptalks$Layer) {
         if (!grid['unit']) {
             grid['unit'] = 'projection';
         }
+        if (grid.center.toArray) {
+            grid.center = grid.center.toArray();
+        }
+        _this._gridCenter = grid.center.slice(0);
         _this._grid = grid;
         return _this;
     }
@@ -155,6 +159,14 @@ var GridLayer = function (_maptalks$Layer) {
 
 
     GridLayer.prototype.getGrid = function getGrid() {
+        var offset = this._grid['offset'];
+        if (offset) {
+            if (maptalks.Util.isFunction(offset)) {
+                offset = offset();
+            }
+            this._grid.center[0] = this._gridCenter[0] + offset[0];
+            this._grid.center[1] = this._gridCenter[1] + offset[1];
+        }
         return this._grid;
     };
 
@@ -3358,6 +3370,6 @@ exports.GridLayer = GridLayer;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.4.2, requires maptalks@>=0.36.0.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.5.0, requires maptalks@>=0.36.0.');
 
 })));
