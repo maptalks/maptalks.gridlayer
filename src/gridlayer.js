@@ -40,6 +40,9 @@ export class GridLayer extends maptalks.Layer {
         if (!grid['unit']) {
             grid['unit'] = 'projection';
         }
+        if (grid.center.toArray) {
+            grid.center = grid.center.toArray();
+        }
         this._gridCenter = grid.center.slice(0);
         this._grid = grid;
     }
