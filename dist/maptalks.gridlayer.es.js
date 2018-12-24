@@ -1,5 +1,5 @@
 /*!
- * maptalks.gridlayer v0.5.0
+ * maptalks.gridlayer v0.5.1
  * LICENSE : MIT
  * (c) 2016-2018 maptalks.org
  */
@@ -2841,7 +2841,7 @@ var shaders = {
 };
 
 var dataGridShaders = {
-    'vertexShader': '\n        precision mediump float;\n\n        attribute vec3 a_position;\n        attribute vec3 a_color;\n        attribute float a_opacity;\n\n        varying vec4 v_color;\n\n        uniform mat4 u_matrix;\n\n        void main() {\n            v_color = vec4(a_color, 1.0) * a_opacity;\n            gl_Position = u_matrix * vec4(a_position, 1.0);\n        }\n    ',
+    'vertexShader': '\n        precision mediump float;\n\n        attribute vec3 a_position;\n        attribute vec3 a_color;\n        attribute float a_opacity;\n\n        varying vec4 v_color;\n\n        uniform mat4 u_matrix;\n\n        void main() {\n            v_color = vec4(a_color / 255.0, 1.0) * (a_opacity / 255.0);\n            gl_Position = u_matrix * vec4(a_position, 1.0);\n        }\n    ',
     // fragment shader, can be replaced by layer.options.fragmentShader
     'fragmentShader': '\n        precision mediump float;\n\n        varying vec4 v_color;\n\n        void main() {\n            vec4 color = v_color;\n            // color = vec4(0.0, 0.0, 0.0, 1.0);\n            gl_FragColor = color;\n        }\n    '
 };
@@ -2974,36 +2974,49 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
             return;
         }
 
-        var vertices = [];
-        var indices = [];
-        if (!this.paintedGridNum) {
+        var isDynamic = Util.isFunction(grid.offset);
+        var vertices = this._dataVertices || [],
+            colors = this._dataColors || [];
+        var indices = this._dataIndices || [];
+        if (!this.paintedGridNum || isDynamic) {
             var c = 0;
             data.forEach(function (gridData, index) {
                 if (!gridData[2]['symbol']) {
                     return;
                 }
-                c = _this2._drawDataGrid({ vertices: vertices, indices: indices }, c, gridData, _this2._compiledSymbols[index], gridInfo);
+                c = _this2._drawDataGrid({ vertices: vertices, colors: colors, indices: indices }, c, gridData, _this2._compiledSymbols[index], gridInfo);
             });
         }
 
         if (!this.dataGridBuffer) {
+            vertices = this._dataVertices = new Float32Array(vertices);
+            colors = this._dataColors = new Uint8Array(colors);
+            indices = this._dataIndices = new Uint32Array(indices);
             this.dataGridBuffer = this.createBuffer();
             this.dataGridIndexBuffer = this.createBuffer();
+            this.dataColorsBuffer = this.createBuffer();
         }
         var gl = this.gl;
 
         this._useDataGridProgram();
         this._updateUniforms();
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.dataGridBuffer);
-        this.enableVertexAttrib([['a_position', 3], ['a_color', 3], ['a_opacity', 1]]);
-        if (vertices.length > 0) {
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.dataColorsBuffer);
+        this.enableVertexAttrib([['a_color', 3, 'UNSIGNED_BYTE'], ['a_opacity', 1, 'UNSIGNED_BYTE']]);
+        if (colors.length > 0) {
+            gl.bufferData(gl.ARRAY_BUFFER, colors, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
         }
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.dataGridBuffer);
+        this.enableVertexAttrib([['a_position', 3]]);
+        if (vertices.length > 0) {
+            gl.bufferData(gl.ARRAY_BUFFER, vertices, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+        }
+
         // Write the indices to the buffer object
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.dataGridIndexBuffer);
         if (indices.length > 0) {
-            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.STATIC_DRAW);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
             this.paintedGridNum = indices.length;
         }
         gl.drawElements(gl.TRIANGLES, this.paintedGridNum, gl.UNSIGNED_INT, 0);
@@ -3011,7 +3024,8 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
 
     GridGLRenderer.prototype._drawDataGrid = function _drawDataGrid(_ref, c, gridData, symbol, gridInfo) {
         var vertices = _ref.vertices,
-            indices = _ref.indices;
+            indices = _ref.indices,
+            colors = _ref.colors;
 
         var map = this.getMap(),
             zoom = map.getGLZoom();
@@ -3023,10 +3037,19 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
             z = this._meterToPoint(map.getCenter(), altitude);
         }
 
+        var b = c / 3 * 4,
+            a = c / 2;
+
         var set$$1 = function set$$1(p) {
-            // vertices[c++] = p;
-            vertices.push(p);
-            c++;
+            vertices[c++] = p;
+        };
+
+        var setIndices = function setIndices(p) {
+            indices[a++] = p;
+        };
+
+        var setColor = function setColor(p) {
+            colors[b++] = p;
         };
 
         var color$$1 = symbol['polygonFill'];
@@ -3036,8 +3059,8 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
             opacity = 0;
         }
 
-        var style = color(color$$1).rgbaArrayNormalized();
-        style[3] *= opacity;
+        var style = color(color$$1).rgbaArray();
+        style[3] *= opacity * 255;
 
         var p1 = void 0,
             p2 = void 0,
@@ -3050,17 +3073,29 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
                 p2 = p1.add(p3.x - p1.x, 0);
                 // p3 = p1.add(w, h);
                 p4 = p1.add(0, p3.y - p1.y);
-                var idx = c / 7;
-                indices.push(idx, idx + 1, idx + 2);
-                indices.push(idx, idx + 2, idx + 3);
-                [p1.x, p1.y, z].forEach(set$$1);
-                style.forEach(set$$1);
-                [p2.x, p2.y, z].forEach(set$$1);
-                style.forEach(set$$1);
-                [p3.x, p3.y, z].forEach(set$$1);
-                style.forEach(set$$1);
-                [p4.x, p4.y, z].forEach(set$$1);
-                style.forEach(set$$1);
+                var idx = c / 3;
+                setIndices(idx);
+                setIndices(idx + 1);
+                setIndices(idx + 2);
+                setIndices(idx);
+                setIndices(idx + 2);
+                setIndices(idx + 3);
+                set$$1(p1.x);
+                set$$1(p1.y);
+                set$$1(z);
+                style.forEach(setColor);
+                set$$1(p2.x);
+                set$$1(p2.y);
+                set$$1(z);
+                style.forEach(setColor);
+                set$$1(p3.x);
+                set$$1(p3.y);
+                set$$1(z);
+                style.forEach(setColor);
+                set$$1(p4.x);
+                set$$1(p4.y);
+                set$$1(z);
+                style.forEach(setColor);
             }
         }
 
@@ -3104,6 +3139,9 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
         gl.deleteProgram(program);
         gl.deleteShader(program.fragmentShader);
         gl.deleteShader(program.vertexShader);
+        delete this._dataVertices;
+        delete this._dataColors;
+        delete this._dataIndices;
     };
 
     GridGLRenderer.prototype.onCanvasCreate = function onCanvasCreate() {
@@ -3178,8 +3216,6 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
     GridGLRenderer.prototype.enableVertexAttrib = function enableVertexAttrib(attributes) {
         var gl = this.gl;
         if (Array.isArray(attributes[0])) {
-            var verticesTexCoords = new Float32Array([0.0, 0.0, 0.0]);
-            var FSIZE = verticesTexCoords.BYTES_PER_ELEMENT;
             var STRIDE = 0;
             for (var i = 0; i < attributes.length; i++) {
                 STRIDE += attributes[i][1] || 0;
@@ -3189,6 +3225,14 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
                 var attr = gl.getAttribLocation(gl.program, attributes[_i2][0]);
                 if (attr < 0) {
                     throw new Error('Failed to get the storage location of ' + attributes[_i2][0]);
+                }
+                var FSIZE = void 0;
+                if (!attributes[_i2][2] || attributes[_i2][2] === 'FLOAT') {
+                    FSIZE = 4;
+                } else if (attributes[_i2][2] === 'BYTE' || attributes[_i2][2] === 'UNSIGNED_BYTE') {
+                    FSIZE = 1;
+                } else {
+                    FSIZE = 2;
                 }
                 gl.vertexAttribPointer(attr, attributes[_i2][1], gl[attributes[_i2][2] || 'FLOAT'], false, FSIZE * STRIDE, FSIZE * offset);
                 offset += attributes[_i2][1] || 0;
@@ -3364,4 +3408,4 @@ GridLayer.mergeOptions({
 
 export { GridLayer };
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.5.0, requires maptalks@>=0.36.0.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.5.1, requires maptalks@>=0.36.0.');
