@@ -180,8 +180,8 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         }
 
         const isDynamic = maptalks.Util.isFunction(grid.offset);
-        const vertices = [], colors = [];
-        const indices = [];
+        let vertices = this._dataVertices || [], colors = this._dataColors || [];
+        let indices = this._dataIndices || [];
         if (!this.paintedGridNum || isDynamic) {
             let c = 0;
             data.forEach((gridData, index) => {
@@ -193,6 +193,9 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         }
 
         if (!this.dataGridBuffer) {
+            vertices = this._dataVertices = new Float32Array(vertices);
+            colors = this._dataColors = new Uint8Array(colors);
+            indices = this._dataIndices = new Uint32Array(indices);
             this.dataGridBuffer = this.createBuffer();
             this.dataGridIndexBuffer = this.createBuffer();
             this.dataColorsBuffer = this.createBuffer();
@@ -205,19 +208,19 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.dataColorsBuffer);
         this.enableVertexAttrib([['a_color', 3, 'UNSIGNED_BYTE'], ['a_opacity', 1, 'UNSIGNED_BYTE']]);
         if (colors.length > 0) {
-            gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(colors), isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+            gl.bufferData(gl.ARRAY_BUFFER, colors, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
         }
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.dataGridBuffer);
         this.enableVertexAttrib([['a_position', 3]]);
         if (vertices.length > 0) {
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+            gl.bufferData(gl.ARRAY_BUFFER, vertices, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
         }
 
         // Write the indices to the buffer object
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.dataGridIndexBuffer);
         if (indices.length > 0) {
-            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
             this.paintedGridNum = indices.length;
         }
         gl.drawElements(gl.TRIANGLES, this.paintedGridNum, gl.UNSIGNED_INT, 0);
@@ -234,14 +237,19 @@ export default class GridGLRenderer extends GridCanvasRenderer {
             z = this._meterToPoint(map.getCenter(), altitude);
         }
 
+        let b = c / 3 * 4,
+            a = c / 2;
+
         const set = p => {
-            // vertices[c++] = p;
-            vertices.push(p);
-            c++;
+            vertices[c++] = p;
+        };
+
+        const setIndices = p => {
+            indices[a++] = p;
         };
 
         const setColor = p => {
-            colors.push(p);
+            colors[b++] = p;
         };
 
         let color = symbol['polygonFill'];
@@ -263,15 +271,27 @@ export default class GridGLRenderer extends GridCanvasRenderer {
                 // p3 = p1.add(w, h);
                 p4 = p1.add(0, p3.y - p1.y);
                 const idx = c / 3;
-                indices.push(idx, idx + 1, idx + 2);
-                indices.push(idx, idx + 2, idx + 3);
-                [p1.x, p1.y, z].forEach(set);
+                setIndices(idx);
+                setIndices(idx + 1);
+                setIndices(idx + 2);
+                setIndices(idx);
+                setIndices(idx + 2);
+                setIndices(idx + 3);
+                set(p1.x);
+                set(p1.y);
+                set(z);
                 style.forEach(setColor);
-                [p2.x, p2.y, z].forEach(set);
+                set(p2.x);
+                set(p2.y);
+                set(z);
                 style.forEach(setColor);
-                [p3.x, p3.y, z].forEach(set);
+                set(p3.x);
+                set(p3.y);
+                set(z);
                 style.forEach(setColor);
-                [p4.x, p4.y, z].forEach(set);
+                set(p4.x);
+                set(p4.y);
+                set(z);
                 style.forEach(setColor);
             }
         }
@@ -313,6 +333,9 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         gl.deleteProgram(program);
         gl.deleteShader(program.fragmentShader);
         gl.deleteShader(program.vertexShader);
+        delete this._dataVertices;
+        delete this._dataColors;
+        delete this._dataIndices;
     }
 
     onCanvasCreate() {
