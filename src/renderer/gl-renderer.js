@@ -41,7 +41,7 @@ const dataGridShaders = {
         uniform mat4 u_matrix;
 
         void main() {
-            v_color = vec4(a_color, 1.0) * a_opacity;
+            v_color = vec4(a_color / 255.0, 1.0) * (a_opacity / 255.0);
             gl_Position = u_matrix * vec4(a_position, 1.0);
         }
     `,
@@ -179,42 +179,51 @@ export default class GridGLRenderer extends GridCanvasRenderer {
             return;
         }
 
-        const vertices = [];
+        const isDynamic = maptalks.Util.isFunction(grid.offset);
+        const vertices = [], colors = [];
         const indices = [];
-        if (!this.paintedGridNum) {
+        if (!this.paintedGridNum || isDynamic) {
             let c = 0;
             data.forEach((gridData, index) => {
                 if (!gridData[2]['symbol']) {
                     return;
                 }
-                c = this._drawDataGrid({ vertices, indices }, c, gridData, this._compiledSymbols[index], gridInfo);
+                c = this._drawDataGrid({ vertices, colors, indices }, c, gridData, this._compiledSymbols[index], gridInfo);
             });
         }
 
         if (!this.dataGridBuffer) {
             this.dataGridBuffer = this.createBuffer();
             this.dataGridIndexBuffer = this.createBuffer();
+            this.dataColorsBuffer = this.createBuffer();
         }
         const gl = this.gl;
 
         this._useDataGridProgram();
         this._updateUniforms();
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.dataGridBuffer);
-        this.enableVertexAttrib([['a_position', 3], ['a_color', 3], ['a_opacity', 1]]);
-        if (vertices.length > 0) {
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.dataColorsBuffer);
+        this.enableVertexAttrib([['a_color', 3, 'UNSIGNED_BYTE'], ['a_opacity', 1, 'UNSIGNED_BYTE']]);
+        if (colors.length > 0) {
+            gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(colors), isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
         }
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.dataGridBuffer);
+        this.enableVertexAttrib([['a_position', 3]]);
+        if (vertices.length > 0) {
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+        }
+
         // Write the indices to the buffer object
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.dataGridIndexBuffer);
         if (indices.length > 0) {
-            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.STATIC_DRAW);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
             this.paintedGridNum = indices.length;
         }
         gl.drawElements(gl.TRIANGLES, this.paintedGridNum, gl.UNSIGNED_INT, 0);
     }
 
-    _drawDataGrid({ vertices, indices }, c, gridData, symbol, gridInfo) {
+    _drawDataGrid({ vertices, indices, colors }, c, gridData, symbol, gridInfo) {
         const map = this.getMap(),
             zoom = map.getGLZoom();
         const cols = Array.isArray(gridData[0]) ? gridData[0] : [gridData[0], gridData[0]],
@@ -231,6 +240,10 @@ export default class GridGLRenderer extends GridCanvasRenderer {
             c++;
         };
 
+        const setColor = p => {
+            colors.push(p);
+        };
+
         let color = symbol['polygonFill'];
         let opacity = symbol['polygonOpacity'] === undefined ? 1 : symbol['polygonOpacity'];
         if (!color) {
@@ -238,8 +251,8 @@ export default class GridGLRenderer extends GridCanvasRenderer {
             opacity = 0;
         }
 
-        const style = Color(color).rgbaArrayNormalized();
-        style[3] *= opacity;
+        const style = Color(color).rgbaArray();
+        style[3] *= opacity * 255;
 
         let p1, p2, p3, p4;
         for (let i = cols[0]; i <= cols[1]; i++) {
@@ -249,17 +262,17 @@ export default class GridGLRenderer extends GridCanvasRenderer {
                 p2 = p1.add(p3.x - p1.x, 0);
                 // p3 = p1.add(w, h);
                 p4 = p1.add(0, p3.y - p1.y);
-                const idx = c / 7;
+                const idx = c / 3;
                 indices.push(idx, idx + 1, idx + 2);
                 indices.push(idx, idx + 2, idx + 3);
                 [p1.x, p1.y, z].forEach(set);
-                style.forEach(set);
+                style.forEach(setColor);
                 [p2.x, p2.y, z].forEach(set);
-                style.forEach(set);
+                style.forEach(setColor);
                 [p3.x, p3.y, z].forEach(set);
-                style.forEach(set);
+                style.forEach(setColor);
                 [p4.x, p4.y, z].forEach(set);
-                style.forEach(set);
+                style.forEach(setColor);
             }
         }
 
@@ -372,8 +385,6 @@ export default class GridGLRenderer extends GridCanvasRenderer {
     enableVertexAttrib(attributes) {
         const gl = this.gl;
         if (Array.isArray(attributes[0])) {
-            const verticesTexCoords = new Float32Array([0.0, 0.0, 0.0]);
-            const FSIZE = verticesTexCoords.BYTES_PER_ELEMENT;
             let STRIDE = 0;
             for (let i = 0; i < attributes.length; i++) {
                 STRIDE += (attributes[i][1] || 0);
@@ -383,6 +394,14 @@ export default class GridGLRenderer extends GridCanvasRenderer {
                 const attr = gl.getAttribLocation(gl.program, attributes[i][0]);
                 if (attr < 0) {
                     throw new Error('Failed to get the storage location of ' + attributes[i][0]);
+                }
+                let FSIZE;
+                if (!attributes[i][2] || attributes[i][2] === 'FLOAT') {
+                    FSIZE = 4;
+                } else if (attributes[i][2] === 'BYTE' || attributes[i][2] === 'UNSIGNED_BYTE') {
+                    FSIZE = 1;
+                } else {
+                    FSIZE = 2;
                 }
                 gl.vertexAttribPointer(attr, attributes[i][1], gl[attributes[i][2] || 'FLOAT'], false, FSIZE * STRIDE, FSIZE * offset);
                 offset += (attributes[i][1] || 0);
