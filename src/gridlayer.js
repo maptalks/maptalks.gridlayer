@@ -35,41 +35,70 @@ const options = {
  */
 export class GridLayer extends maptalks.Layer {
 
-    constructor(id, grid, options) {
+    constructor(id, grids, options) {
         super(id, options);
+        if (!grids) {
+            this._gridCenters = [];
+            this._grids = [];
+            return;
+        }
+        if (!Array.isArray(grids)) {
+            grids = [grids];
+        }
+
+        grids.forEach(grid => {
+            if (!grid['unit']) {
+                grid['unit'] = 'projection';
+            }
+            if (grid.center.toArray) {
+                grid.center = grid.center.toArray();
+            }
+        });
+        this._gridCenters = grids.map(grid => grid.center.slice(0));
+        this._grids = grids;
+    }
+
+    getGridCount() {
+        if (!this._grids) {
+            return 0;
+        }
+        return this._grids.length;
+    }
+
+    /**
+     * Get grid at given index
+     * @return {Object} grid object
+     */
+    getGrid(gridIndex = 0) {
+        const grid = this._grids[gridIndex];
+        if (!grid) {
+            return null;
+        }
+        let offset = grid['offset'];
+        if (offset) {
+            if (maptalks.Util.isFunction(offset)) {
+                offset = offset();
+            }
+            grid.center[0] = this._gridCenters[gridIndex][0] + offset[0];
+            grid.center[1] = this._gridCenters[gridIndex][1] + offset[1];
+        }
+        return grid;
+    }
+
+    setGrid(grid, gridIndex = 0) {
         if (!grid['unit']) {
             grid['unit'] = 'projection';
         }
         if (grid.center.toArray) {
             grid.center = grid.center.toArray();
         }
-        this._gridCenter = grid.center.slice(0);
-        this._grid = grid;
-    }
-
-    /**
-     * [getGrid description]
-     * @return {[type]} [description]
-     */
-    getGrid() {
-        let offset = this._grid['offset'];
-        if (offset) {
-            if (maptalks.Util.isFunction(offset)) {
-                offset = offset();
-            }
-            this._grid.center[0] = this._gridCenter[0] + offset[0];
-            this._grid.center[1] = this._gridCenter[1] + offset[1];
-        }
-        return this._grid;
-    }
-
-    setGrid(grid) {
-        this._grid = grid;
+        this._gridCenters[gridIndex] = grid.center.slice(0);
+        this._grids[gridIndex] = grid;
         return this.redraw();
     }
 
-    setGridData(data) {
-        this._grid.data = data;
+    setGridData(data, gridIndex = 0) {
+        this._grids[gridIndex].data = data;
         return this.redraw();
     }
 
@@ -82,15 +111,15 @@ export class GridLayer extends maptalks.Layer {
         return this;
     }
 
-    isEmpty() {
-        if (!this._grid) {
+    isEmpty(gridIndex = 0) {
+        if (!this._grids || !this._grids[gridIndex]) {
             return true;
         }
         return false;
     }
 
     clear() {
-        delete this._grid;
+        delete this._grids;
         this.fire('clear');
         return this.redraw();
     }
@@ -105,10 +134,11 @@ export class GridLayer extends maptalks.Layer {
 
     /**
      * Get grid's geographic exteng
+     * @param {Number} [gridIndex=0] - grid's gridIndex
      * @return {Extent}
      */
-    getGridExtent() {
-        const grid = this.getGrid(),
+    getGridExtent(gridIndex = 0) {
+        const grid = this.getGrid(gridIndex),
             center = new maptalks.Coordinate(grid.center),
             map = this.getMap(),
             w = grid.width,
@@ -153,13 +183,14 @@ export class GridLayer extends maptalks.Layer {
     /**
      * Get cell index at coordinate
      * @param  {Coordinate} coordinate
+     * @param  {Number} gridIndex
      * @return {Object}
      * @private
      */
-    getCellAt(coordinate) {
-        const grid = this.getGrid(),
+    getCellAt(coordinate, gridIndex = 0) {
+        const grid = this.getGrid(gridIndex),
             map = this.getMap(),
-            extent = this.getGridExtent();
+            extent = this.getGridExtent(gridIndex);
         if (!extent.contains(coordinate)) {
             return null;
         }
@@ -191,11 +222,12 @@ export class GridLayer extends maptalks.Layer {
      * Get cell's geometry
      * @param {Number} col cell col
      * @param {Number} row cell row
+     * @param  {Number} gridIndex
      * @returns {maptalks.Geometry}
      */
-    getCellGeometry(col, row) {
+    getCellGeometry(col, row, gridIndex = 0) {
         const map = this.getMap(),
-            grid = this.getGrid();
+            grid = this.getGrid(gridIndex);
         const gridCenter = new maptalks.Coordinate(grid.center);
         if (grid['unit'] === 'projection') {
             const center = map.coordinateToPoint(gridCenter),
@@ -221,9 +253,10 @@ export class GridLayer extends maptalks.Layer {
      * Visit data cells around given coordinate
      * @param  {maptalks.Coordinate} coordinate
      * @param {Function}  cb  callback function, parameter is [col, row, { properties, symbol }], return false to break the visiting
+     * @param  {Number} gridIndex
      */
-    visitAround(coordinate, cb) {
-        const grid = this.getGrid(),
+    visitAround(coordinate, cb, gridIndex = 0) {
+        const grid = this.getGrid(gridIndex),
             gridData = grid.data;
         if (!coordinate || !grid.data || !cb) {
             return;
@@ -249,7 +282,7 @@ export class GridLayer extends maptalks.Layer {
             return;
         }
 
-        const startCell = this.getCellAt(coordinate);
+        const startCell = this.getCellAt(coordinate, gridIndex);
         if (!startCell) {
             return;
         }
@@ -268,18 +301,19 @@ export class GridLayer extends maptalks.Layer {
     /**
      * Return cell index and cell geometry at coordinate
      * @param {maptalks.Coordinate} coordinate coordinate
+     * @param  {Number} gridIndex
      * @returns {Object} { col : col, row : row, geometry : cellGeometry }
      */
-    identify(coordinate) {
+    identify(coordinate, gridIndex = 0) {
         if (!coordinate) {
             return null;
         }
-        const extent = this.getGridExtent();
+        const extent = this.getGridExtent(gridIndex);
         if (!extent.contains(coordinate)) {
             return null;
         }
-        const idx = this.getCellAt(coordinate);
-        const rectangle = this.getCellGeometry(idx[0], idx[1]);
+        const idx = this.getCellAt(coordinate, gridIndex);
+        const rectangle = this.getCellGeometry(idx[0], idx[1], gridIndex);
         return {
             col : idx[0],
             row : idx[1],
@@ -292,10 +326,7 @@ export class GridLayer extends maptalks.Layer {
      * @return {Object} layer's JSON
      */
     toJSON() {
-        const grid = this.getGrid();
-        if (grid['center'] instanceof maptalks.Coordinate) {
-            grid['center'] = grid['center'].toArray();
-        }
+        const grid = this._grids;
         return {
             'type'      : 'GridLayer',
             'id'        : this.getId(),

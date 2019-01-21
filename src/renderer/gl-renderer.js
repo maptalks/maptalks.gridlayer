@@ -80,8 +80,24 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         this.draw();
     }
 
-    redraw() {
-        this.setToRedraw();
+    reset() {
+        super.reset();
+        delete this.paintedGridNum;
+        delete this._dataVertices;
+        delete this._dataColors;
+        delete this._dataIndices;
+        if (this.gl) {
+            if (this._buffers) {
+                this._buffers.forEach(buffer => {
+                    this.gl.deleteBuffer(buffer);
+                });
+            }
+        }
+        delete this.gridBuffer;
+        delete this.dataGridBuffer;
+        delete this.dataGridIndexBuffer;
+        delete this.dataColorsBuffer;
+        this._buffers = [];
     }
 
     _meterToPoint(center, altitude) {
@@ -107,60 +123,64 @@ export default class GridGLRenderer extends GridCanvasRenderer {
     }
 
     _drawGrid() {
-        const colRow = this._preDrawGrid();
-        if (!colRow) {
-            return;
-        }
-
-        const cols = colRow['cols'],
-            rows = colRow['rows'],
-            gridInfo = colRow['gridInfo'];
-        let p1, p2;
-        const map = this.getMap(),
-            zoom = map.getGLZoom(),
-            altitude = this.layer.options['altitude'];
-        let z = 0;
-        if (altitude) {
-            z = this._meterToPoint(map.getCenter(), altitude);
-        }
-
-        const count = (cols[1] - cols[0] + 1) * 6 + (rows[1] - rows[0] + 1) * 6;
-        const vertices = new Float32Array(count);
-        let c = 0;
-        const set = p => {
-            vertices[c++] = p;
-        };
-        //划线
-        for (let i = cols[0]; i <= cols[1]; i++) {
-            p1 = this._getCellNWPoint(i, rows[0], gridInfo, zoom);
-            p2 = this._getCellNWPoint(i, rows[1], gridInfo, zoom);
-            [p1.x, p1.y, z, p2.x, p2.y, z].forEach(set);
-        }
-        for (let i = rows[0]; i <= rows[1]; i++) {
-            p1 = this._getCellNWPoint(cols[0], i, gridInfo, zoom);
-            p2 = this._getCellNWPoint(cols[1], i, gridInfo, zoom);
-            [p1.x, p1.y, z, p2.x, p2.y, z].forEach(set);
-        }
-
         if (!this.gridBuffer) {
-            this.gridBuffer = this.createBuffer();
+            this.gridBuffer = [];
         }
-        const gl = this.gl;
-        gl.lineWidth(this._compiledGridStyle.lineWidth || 1);
-
         this._useGridProgram();
-        this._updateUniforms();
+        const colRows = this._preDrawGrid();
+        for (let i = 0; i < colRows.length; i++) {
+            const colRow = colRows[i];
+            if (!colRow) {
+                continue;
+            }
+            const cols = colRow['cols'],
+                rows = colRow['rows'],
+                gridInfo = colRow['gridInfo'];
+            let p1, p2;
+            const map = this.getMap(),
+                zoom = map.getGLZoom(),
+                altitude = this.layer.options['altitude'];
+            let z = 0;
+            if (altitude) {
+                z = this._meterToPoint(map.getCenter(), altitude);
+            }
 
-        gl.uniform1f(this.program['u_opacity'], this._compiledGridStyle.lineOpacity || 1);
-        const color = Color(this._compiledGridStyle.lineColor || '#000').rgbaArrayNormalized();
-        gl.uniform4fv(this.program['u_color'], color || [0, 0, 0, 1]);
+            const count = (cols[1] - cols[0] + 1) * 6 + (rows[1] - rows[0] + 1) * 6;
+            const vertices = new Float32Array(count);
+            let c = 0;
+            const set = p => {
+                vertices[c++] = p;
+            };
+            //划线
+            for (let i = cols[0]; i <= cols[1]; i++) {
+                p1 = this._getCellNWPoint(i, rows[0], gridInfo, zoom);
+                p2 = this._getCellNWPoint(i, rows[1], gridInfo, zoom);
+                [p1.x, p1.y, z, p2.x, p2.y, z].forEach(set);
+            }
+            for (let i = rows[0]; i <= rows[1]; i++) {
+                p1 = this._getCellNWPoint(cols[0], i, gridInfo, zoom);
+                p2 = this._getCellNWPoint(cols[1], i, gridInfo, zoom);
+                [p1.x, p1.y, z, p2.x, p2.y, z].forEach(set);
+            }
 
+            if (!this.gridBuffer[i]) {
+                this.gridBuffer[i] = this.createBuffer();
+            }
+            const gl = this.gl;
+            gl.lineWidth(this._compiledGridStyle.lineWidth || 1);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.gridBuffer);
-        this.enableVertexAttrib(['a_position', 3]);
-        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
-        gl.drawArrays(gl.LINES, 0, vertices.length / 3);
-        gl.lineWidth(1);
+            this._updateUniforms();
+
+            gl.uniform1f(this.program['u_opacity'], this._compiledGridStyle.lineOpacity || 1);
+            const color = Color(this._compiledGridStyle.lineColor || '#000').rgbaArrayNormalized();
+            gl.uniform4fv(this.program['u_color'], color || [0, 0, 0, 1]);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.gridBuffer[i]);
+            gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
+            this.enableVertexAttrib(['a_position', 3]);
+            gl.drawArrays(gl.LINES, 0, vertices.length / 3);
+            gl.lineWidth(1);
+        }
     }
 
     _useDataGridProgram() {
@@ -172,58 +192,75 @@ export default class GridGLRenderer extends GridCanvasRenderer {
     }
 
     _glDrawDataGrid() {
-        const grid = this.layer.getGrid(),
-            gridInfo = grid['unit'] === 'projection' ? this._getProjGridToDraw() : this._getGridToDraw(),
-            data = grid['data'];
-        if (!gridInfo || !Array.isArray(data) || !data.length) {
-            return;
-        }
-
-        const isDynamic = maptalks.Util.isFunction(grid.offset);
-        let vertices = this._dataVertices || [], colors = this._dataColors || [];
-        let indices = this._dataIndices || [];
-        if (!this.paintedGridNum || isDynamic) {
-            let c = 0;
-            data.forEach((gridData, index) => {
-                if (!gridData[2]['symbol']) {
-                    return;
-                }
-                c = this._drawDataGrid({ vertices, colors, indices }, c, gridData, this._compiledSymbols[index], gridInfo);
-            });
-        }
-
-        if (!this.dataGridBuffer) {
-            vertices = this._dataVertices = new Float32Array(vertices);
-            colors = this._dataColors = new Uint8Array(colors);
-            indices = this._dataIndices = new Uint32Array(indices);
-            this.dataGridBuffer = this.createBuffer();
-            this.dataGridIndexBuffer = this.createBuffer();
-            this.dataColorsBuffer = this.createBuffer();
+        if (!this.paintedGridNum) {
+            this.paintedGridNum = [];
+            this._dataVertices = [];
+            this._dataColors = [];
+            this._dataIndices = [];
+            this.dataGridBuffer = [];
+            this.dataGridIndexBuffer = [];
+            this.dataColorsBuffer = [];
         }
         const gl = this.gl;
-
         this._useDataGridProgram();
-        this._updateUniforms();
+        const count = this.layer.getGridCount();
+        for (let i = 0; i < count; i++) {
+            const grid = this.layer.getGrid(i),
+                gridInfo = grid['unit'] === 'projection' ? this._getProjGridToDraw(grid, i) : this._getGridToDraw(grid, i),
+                data = grid['data'];
+            if (!gridInfo || !Array.isArray(data) || !data.length) {
+                continue;
+            }
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.dataColorsBuffer);
-        this.enableVertexAttrib([['a_color', 3, 'UNSIGNED_BYTE'], ['a_opacity', 1, 'UNSIGNED_BYTE']]);
-        if (colors.length > 0) {
-            gl.bufferData(gl.ARRAY_BUFFER, colors, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+            const isDynamic = maptalks.Util.isFunction(grid.offset);
+            let vertices = this._dataVertices[i] || [], colors = this._dataColors[i] || [];
+            let indices = this._dataIndices[i] || [];
+            if (!this.paintedGridNum[i] || isDynamic) {
+                let c = 0;
+                data.forEach((gridData, index) => {
+                    if (!gridData[2]['symbol']) {
+                        return;
+                    }
+                    c = this._drawDataGrid({ vertices, colors, indices }, c, gridData, this._compiledSymbols[i][index], gridInfo);
+                });
+            }
+
+            if (!this.dataGridBuffer[i]) {
+                vertices = this._dataVertices[i] = new Float32Array(vertices);
+                colors = this._dataColors[i] = new Uint8Array(colors);
+                indices = this._dataIndices[i] = new Uint32Array(indices);
+                this.dataGridBuffer[i] = this.createBuffer();
+                this.dataGridIndexBuffer[i] = this.createBuffer();
+                this.dataColorsBuffer[i] = this.createBuffer();
+            }
+
+            this._updateUniforms();
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.dataGridBuffer[i]);
+            this.enableVertexAttrib([['a_position', 3]]);
+            if (vertices.length > 0) {
+                gl.bufferData(gl.ARRAY_BUFFER, vertices, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+            }
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.dataColorsBuffer[i]);
+            this.enableVertexAttrib([['a_color', 3, 'UNSIGNED_BYTE'], ['a_opacity', 1, 'UNSIGNED_BYTE']]);
+            if (colors.length > 0) {
+                gl.bufferData(gl.ARRAY_BUFFER, colors, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+            }
+
+            // Write the indices to the buffer object
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.dataGridIndexBuffer[i]);
+            if (indices.length > 0) {
+                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+                this.paintedGridNum[i] = indices.length;
+            }
+            gl.drawElements(gl.TRIANGLES, this.paintedGridNum[i], gl.UNSIGNED_INT, 0);
+
         }
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.dataGridBuffer);
-        this.enableVertexAttrib([['a_position', 3]]);
-        if (vertices.length > 0) {
-            gl.bufferData(gl.ARRAY_BUFFER, vertices, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
-        }
-
-        // Write the indices to the buffer object
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.dataGridIndexBuffer);
-        if (indices.length > 0) {
-            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
-            this.paintedGridNum = indices.length;
-        }
-        gl.drawElements(gl.TRIANGLES, this.paintedGridNum, gl.UNSIGNED_INT, 0);
+        gl.disableVertexAttribArray(gl.getAttribLocation(gl.program, 'a_position'));
+        gl.disableVertexAttribArray(gl.getAttribLocation(gl.program, 'a_color'));
+        gl.disableVertexAttribArray(gl.getAttribLocation(gl.program, 'a_opacity'));
     }
 
     _drawDataGrid({ vertices, indices, colors }, c, gridData, symbol, gridInfo) {
@@ -301,15 +338,19 @@ export default class GridGLRenderer extends GridCanvasRenderer {
 
 
     _drawAllLabels() {
-        const grid = this.layer.getGrid(),
-            gridInfo = grid['unit'] === 'projection' ? this._getProjGridToDraw() : this._getGridToDraw(),
-            data = grid['data'];
-        if (!gridInfo || !Array.isArray(data) || !data.length) {
-            return;
+        const count = this.layer.getGridCount();
+        for (let i = 0; i < count; i++) {
+            const grid = this.layer.getGrid(i),
+                gridInfo = grid['unit'] === 'projection' ? this._getProjGridToDraw(grid, i) : this._getGridToDraw(grid, i),
+                data = grid['data'];
+            if (!gridInfo || !Array.isArray(data) || !data.length) {
+                continue;
+            }
+            data.forEach((gridData, index) => {
+                this._drawLabel(gridData, index, gridInfo);
+            });
         }
-        data.forEach((gridData, index) => {
-            this._drawLabel(gridData, index, gridInfo);
-        });
+
     }
 
     onRemove() {
@@ -333,6 +374,7 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         gl.deleteProgram(program);
         gl.deleteShader(program.fragmentShader);
         gl.deleteShader(program.vertexShader);
+        delete this.paintedGridNum;
         delete this._dataVertices;
         delete this._dataColors;
         delete this._dataIndices;
@@ -426,14 +468,15 @@ export default class GridGLRenderer extends GridCanvasRenderer {
                 } else {
                     FSIZE = 2;
                 }
+                gl.enableVertexAttribArray(attr);
                 gl.vertexAttribPointer(attr, attributes[i][1], gl[attributes[i][2] || 'FLOAT'], false, FSIZE * STRIDE, FSIZE * offset);
                 offset += (attributes[i][1] || 0);
-                gl.enableVertexAttribArray(attr);
+
             }
         } else {
             const attr = gl.getAttribLocation(gl.program, attributes[0]);
-            gl.vertexAttribPointer(attr, attributes[1], gl[attributes[2] || 'FLOAT'], false, 0, 0);
             gl.enableVertexAttribArray(attr);
+            gl.vertexAttribPointer(attr, attributes[1], gl[attributes[2] || 'FLOAT'], false, 0, 0);
         }
     }
 

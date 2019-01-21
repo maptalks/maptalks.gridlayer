@@ -82,6 +82,47 @@ describe('GridLayer', function () {
         .addTo(map);
     });
 
+    it('multiple grids', function (done) {
+        var symbol = {
+            'lineColor' : '#000',
+            'lineOpacity' : 1,
+            'polygonFill' : 'rgb(0, 0, 0)',
+            'polygonOpacity' : 0.4
+        };
+        var layer = new maptalks.GridLayer('g', [
+            {
+                projection : true,
+                center : map.getCenter(),
+                width : 100,
+                height : 100,
+                cols : [-5, 5],
+                rows : [-5, 5],
+                data : [
+                    [0, 0, { properties : 1 }]
+                ]
+            },
+            {
+                projection : true,
+                center : map.getCenter(),
+                width : 50,
+                height : 50,
+                cols : [-5, 5],
+                rows : [-5, 5],
+                data : [
+                    [0, 0, { properties : 1 }]
+                ]
+            }
+        ], {
+            renderer : 'canvas',
+            'symbol' : symbol
+        });
+        layer.on('layerload', function () {
+            expect(layer).to.be.painted();
+            done();
+        })
+        .addTo(map);
+    });
+
     it('can identify', function (done) {
         var layer = new maptalks.GridLayer('g', {
             projection : true,
