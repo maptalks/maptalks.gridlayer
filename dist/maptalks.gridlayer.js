@@ -1,7 +1,7 @@
 /*!
- * maptalks.gridlayer v0.5.1
+ * maptalks.gridlayer v0.6.0
  * LICENSE : MIT
- * (c) 2016-2018 maptalks.org
+ * (c) 2016-2019 maptalks.org
  */
 /*!
  * requires maptalks@>=0.36.0 
@@ -136,10 +136,68 @@ var options = {
 var GridLayer = function (_maptalks$Layer) {
     inherits(GridLayer, _maptalks$Layer);
 
-    function GridLayer(id, grid, options) {
+    function GridLayer(id, grids, options) {
         classCallCheck(this, GridLayer);
 
         var _this = possibleConstructorReturn(this, _maptalks$Layer.call(this, id, options));
+
+        if (!grids) {
+            _this._gridCenters = [];
+            _this._grids = [];
+            return possibleConstructorReturn(_this);
+        }
+        if (!Array.isArray(grids)) {
+            grids = [grids];
+        }
+
+        grids.forEach(function (grid) {
+            if (!grid['unit']) {
+                grid['unit'] = 'projection';
+            }
+            if (grid.center.toArray) {
+                grid.center = grid.center.toArray();
+            }
+        });
+        _this._gridCenters = grids.map(function (grid) {
+            return grid.center.slice(0);
+        });
+        _this._grids = grids;
+        return _this;
+    }
+
+    GridLayer.prototype.getGridCount = function getGridCount() {
+        if (!this._grids) {
+            return 0;
+        }
+        return this._grids.length;
+    };
+
+    /**
+     * Get grid at given index
+     * @return {Object} grid object
+     */
+
+
+    GridLayer.prototype.getGrid = function getGrid() {
+        var gridIndex = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+
+        var grid = this._grids[gridIndex];
+        if (!grid) {
+            return null;
+        }
+        var offset = grid['offset'];
+        if (offset) {
+            if (maptalks.Util.isFunction(offset)) {
+                offset = offset();
+            }
+            grid.center[0] = this._gridCenters[gridIndex][0] + offset[0];
+            grid.center[1] = this._gridCenters[gridIndex][1] + offset[1];
+        }
+        return grid;
+    };
+
+    GridLayer.prototype.setGrid = function setGrid(grid) {
+        var gridIndex = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
         if (!grid['unit']) {
             grid['unit'] = 'projection';
@@ -147,36 +205,15 @@ var GridLayer = function (_maptalks$Layer) {
         if (grid.center.toArray) {
             grid.center = grid.center.toArray();
         }
-        _this._gridCenter = grid.center.slice(0);
-        _this._grid = grid;
-        return _this;
-    }
-
-    /**
-     * [getGrid description]
-     * @return {[type]} [description]
-     */
-
-
-    GridLayer.prototype.getGrid = function getGrid() {
-        var offset = this._grid['offset'];
-        if (offset) {
-            if (maptalks.Util.isFunction(offset)) {
-                offset = offset();
-            }
-            this._grid.center[0] = this._gridCenter[0] + offset[0];
-            this._grid.center[1] = this._gridCenter[1] + offset[1];
-        }
-        return this._grid;
-    };
-
-    GridLayer.prototype.setGrid = function setGrid(grid) {
-        this._grid = grid;
+        this._gridCenters[gridIndex] = grid.center.slice(0);
+        this._grids[gridIndex] = grid;
         return this.redraw();
     };
 
     GridLayer.prototype.setGridData = function setGridData(data) {
-        this._grid.data = data;
+        var gridIndex = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+        this._grids[gridIndex].data = data;
         return this.redraw();
     };
 
@@ -190,14 +227,16 @@ var GridLayer = function (_maptalks$Layer) {
     };
 
     GridLayer.prototype.isEmpty = function isEmpty() {
-        if (!this._grid) {
+        var gridIndex = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+
+        if (!this._grids || !this._grids[gridIndex]) {
             return true;
         }
         return false;
     };
 
     GridLayer.prototype.clear = function clear() {
-        delete this._grid;
+        delete this._grids;
         this.fire('clear');
         return this.redraw();
     };
@@ -212,12 +251,15 @@ var GridLayer = function (_maptalks$Layer) {
 
     /**
      * Get grid's geographic exteng
+     * @param {Number} [gridIndex=0] - grid's gridIndex
      * @return {Extent}
      */
 
 
     GridLayer.prototype.getGridExtent = function getGridExtent() {
-        var grid = this.getGrid(),
+        var gridIndex = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+
+        var grid = this.getGrid(gridIndex),
             center = new maptalks.Coordinate(grid.center),
             map = this.getMap(),
             w = grid.width,
@@ -264,15 +306,18 @@ var GridLayer = function (_maptalks$Layer) {
     /**
      * Get cell index at coordinate
      * @param  {Coordinate} coordinate
+     * @param  {Number} gridIndex
      * @return {Object}
      * @private
      */
 
 
     GridLayer.prototype.getCellAt = function getCellAt(coordinate) {
-        var grid = this.getGrid(),
+        var gridIndex = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+        var grid = this.getGrid(gridIndex),
             map = this.getMap(),
-            extent = this.getGridExtent();
+            extent = this.getGridExtent(gridIndex);
         if (!extent.contains(coordinate)) {
             return null;
         }
@@ -304,13 +349,16 @@ var GridLayer = function (_maptalks$Layer) {
      * Get cell's geometry
      * @param {Number} col cell col
      * @param {Number} row cell row
+     * @param  {Number} gridIndex
      * @returns {maptalks.Geometry}
      */
 
 
     GridLayer.prototype.getCellGeometry = function getCellGeometry(col, row) {
+        var gridIndex = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+
         var map = this.getMap(),
-            grid = this.getGrid();
+            grid = this.getGrid(gridIndex);
         var gridCenter = new maptalks.Coordinate(grid.center);
         if (grid['unit'] === 'projection') {
             var center = map.coordinateToPoint(gridCenter),
@@ -336,11 +384,14 @@ var GridLayer = function (_maptalks$Layer) {
      * Visit data cells around given coordinate
      * @param  {maptalks.Coordinate} coordinate
      * @param {Function}  cb  callback function, parameter is [col, row, { properties, symbol }], return false to break the visiting
+     * @param  {Number} gridIndex
      */
 
 
     GridLayer.prototype.visitAround = function visitAround(coordinate, cb) {
-        var grid = this.getGrid(),
+        var gridIndex = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+
+        var grid = this.getGrid(gridIndex),
             gridData = grid.data;
         if (!coordinate || !grid.data || !cb) {
             return;
@@ -366,7 +417,7 @@ var GridLayer = function (_maptalks$Layer) {
             return;
         }
 
-        var startCell = this.getCellAt(coordinate);
+        var startCell = this.getCellAt(coordinate, gridIndex);
         if (!startCell) {
             return;
         }
@@ -385,20 +436,23 @@ var GridLayer = function (_maptalks$Layer) {
     /**
      * Return cell index and cell geometry at coordinate
      * @param {maptalks.Coordinate} coordinate coordinate
+     * @param  {Number} gridIndex
      * @returns {Object} { col : col, row : row, geometry : cellGeometry }
      */
 
 
     GridLayer.prototype.identify = function identify(coordinate) {
+        var gridIndex = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
         if (!coordinate) {
             return null;
         }
-        var extent = this.getGridExtent();
+        var extent = this.getGridExtent(gridIndex);
         if (!extent.contains(coordinate)) {
             return null;
         }
-        var idx = this.getCellAt(coordinate);
-        var rectangle = this.getCellGeometry(idx[0], idx[1]);
+        var idx = this.getCellAt(coordinate, gridIndex);
+        var rectangle = this.getCellGeometry(idx[0], idx[1], gridIndex);
         return {
             col: idx[0],
             row: idx[1],
@@ -413,10 +467,7 @@ var GridLayer = function (_maptalks$Layer) {
 
 
     GridLayer.prototype.toJSON = function toJSON() {
-        var grid = this.getGrid();
-        if (grid['center'] instanceof maptalks.Coordinate) {
-            grid['center'] = grid['center'].toArray();
-        }
+        var grid = this._grids;
         return {
             'type': 'GridLayer',
             'id': this.getId(),
@@ -468,7 +519,7 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
     };
 
     GridCanvasRenderer.prototype.draw = function draw() {
-        var grid = this.layer.getGrid();
+        var grid = this.layer.getGrid(0);
         if (!grid) {
             this.completeRender();
             return;
@@ -494,18 +545,26 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
             resources = maptalks.Util.getExternalResources(this._compiledGridStyle);
         }
         if (this._compiledSymbols) {
-            this._compiledSymbols.forEach(function (s) {
-                var c = maptalks.Util.getExternalResources(s);
-                if (c) {
-                    resources = resources.concat(c);
+            for (var i = 0; i < this._compiledSymbols.length; i++) {
+                var gridSymbols = this._compiledSymbols[i];
+                for (var ii = 0; ii < gridSymbols.length; ii++) {
+                    var c = maptalks.Util.getExternalResources(gridSymbols[ii]);
+                    if (c) {
+                        resources = resources.concat(c);
+                    }
                 }
-            });
+            }
         }
         return resources;
     };
 
     GridCanvasRenderer.prototype.redraw = function redraw() {
+        this.reset();
         this.setToRedraw();
+    };
+
+    GridCanvasRenderer.prototype.reset = function reset() {
+        delete this._compiledSymbols;
     };
 
     GridCanvasRenderer.prototype._compileStyles = function _compileStyles() {
@@ -518,91 +577,111 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
             });
         }
         if (!this._compiledSymbols) {
-            var map = this.getMap(),
-                grid = this.layer.getGrid(),
-                data = grid['data'];
-            this._compiledSymbols = [];
-            if (data) {
-                data.forEach(function (gridData, index) {
-                    if (!gridData[2]['symbol']) {
-                        return;
+            (function () {
+                var map = _this2.getMap(),
+                    gridCount = _this2.layer.getGridCount();
+                _this2._compiledSymbols = [];
+
+                var _loop = function _loop(i) {
+                    var grid = _this2.layer.getGrid(i),
+                        data = grid['data'];
+                    _this2._compiledSymbols[i] = [];
+                    if (data) {
+                        data.forEach(function (gridData, index) {
+                            if (!gridData[2]['symbol']) {
+                                return;
+                            }
+                            var argFn = function (props) {
+                                return function () {
+                                    return [map.getZoom(), props];
+                                };
+                            }(gridData[2]['properties']);
+                            var s = maptalks.Util.convertResourceUrl(gridData[2]['symbol']);
+                            _this2._compiledSymbols[i][index] = maptalks.MapboxUtil.loadFunctionTypes(s, argFn);
+                        });
                     }
-                    var argFn = function (props) {
-                        return function () {
-                            return [map.getZoom(), props];
-                        };
-                    }(gridData[2]['properties']);
-                    var s = maptalks.Util.convertResourceUrl(gridData[2]['symbol']);
-                    _this2._compiledSymbols[index] = maptalks.MapboxUtil.loadFunctionTypes(s, argFn);
-                });
-            }
+                };
+
+                for (var i = 0; i < gridCount; i++) {
+                    _loop(i);
+                }
+            })();
         }
     };
 
     GridCanvasRenderer.prototype._preDrawGrid = function _preDrawGrid() {
-        var grid = this.layer.getGrid(),
-            gridInfo = grid['unit'] === 'projection' ? this._getProjGridToDraw() : this._getGridToDraw();
-        if (!gridInfo || this._compiledGridStyle.lineOpacity <= 0 || this._compiledGridStyle.lineWidth <= 0) {
-            return null;
-        }
-        var cols = gridInfo.cols,
-            rows = gridInfo.rows,
-            width = gridInfo.width,
-            height = gridInfo.height,
-            p0 = this._getCellNW(cols[0], rows[0], gridInfo);
-        var p2 = void 0;
-        if (width < 0.5 || height < 0.5 || this._compiledGridStyle['polygonOpacity'] > 0 || this._compiledGridStyle['polygonColor'] || this._compiledGridStyle['polygonPatternFile']) {
-            p2 = this._getCellNW(cols[1] + 1, rows[1] + 1, gridInfo);
-            this.context.beginPath();
-            this.context.rect(p0.x, p0.y, p2.x - p0.x, p2.y - p0.y);
-            this.context.fillStyle = this._compiledGridStyle.lineColor;
-            if (this._compiledGridStyle['polygonOpacity'] > 0) {
-                maptalks.Canvas.fillCanvas(this.context, this._compiledGridStyle['polygonOpacity'], p0.x, p0.y);
-            } else {
-                maptalks.Canvas.fillCanvas(this.context, 1, p0.x, p0.y);
+        var count = this.layer.getGridCount();
+        var gridInfos = [];
+        for (var i = 0; i < count; i++) {
+            var grid = this.layer.getGrid(i),
+                gridInfo = grid['unit'] === 'projection' ? this._getProjGridToDraw(grid, i) : this._getGridToDraw(grid, i);
+            if (!gridInfo || this._compiledGridStyle.lineOpacity <= 0 || this._compiledGridStyle.lineWidth <= 0) {
+                gridInfos.push(null);
+                continue;
             }
-            if (width < 0.5 || height < 0.5) {
-                return null;
+            var cols = gridInfo.cols,
+                rows = gridInfo.rows,
+                width = gridInfo.width,
+                height = gridInfo.height,
+                p0 = this._getCellNW(cols[0], rows[0], gridInfo);
+            var p2 = void 0;
+            if (width < 0.5 || height < 0.5 || this._compiledGridStyle['polygonOpacity'] > 0 || this._compiledGridStyle['polygonColor'] || this._compiledGridStyle['polygonPatternFile']) {
+                p2 = this._getCellNW(cols[1] + 1, rows[1] + 1, gridInfo);
+                this.context.beginPath();
+                this.context.rect(p0.x, p0.y, p2.x - p0.x, p2.y - p0.y);
+                this.context.fillStyle = this._compiledGridStyle.lineColor;
+                if (this._compiledGridStyle['polygonOpacity'] > 0) {
+                    maptalks.Canvas.fillCanvas(this.context, this._compiledGridStyle['polygonOpacity'], p0.x, p0.y);
+                } else {
+                    maptalks.Canvas.fillCanvas(this.context, 1, p0.x, p0.y);
+                }
+                if (width < 0.5 || height < 0.5) {
+                    gridInfos.push(null);
+                    continue;
+                }
             }
+            gridInfos.push({
+                cols: cols,
+                rows: rows,
+                gridInfo: gridInfo,
+                p0: p0
+            });
         }
-        return {
-            cols: cols,
-            rows: rows,
-            gridInfo: gridInfo,
-            p0: p0
-        };
+        return gridInfos;
     };
 
     GridCanvasRenderer.prototype._drawGrid = function _drawGrid() {
-        var colRow = this._preDrawGrid();
-        if (!colRow) {
-            return;
+        var colRows = this._preDrawGrid();
+        for (var i = 0; i < colRows.length; i++) {
+            var colRow = colRows[i];
+            if (!colRow) {
+                continue;
+            }
+            this.context.beginPath();
+            var cols = colRow['cols'],
+                rows = colRow['rows'],
+                gridInfo = colRow['gridInfo'],
+                p0 = colRow['p0'];
+            var p1 = void 0,
+                p2 = void 0;
+            for (var _i = cols[0]; _i <= cols[1]; _i++) {
+                p1 = this._getCellNW(_i, rows[0], gridInfo);
+                p2 = this._getCellNW(_i, rows[1], gridInfo);
+                this.context.moveTo(p1.x, p1.y);
+                this.context.lineTo(p2.x, p2.y);
+            }
+            for (var _i2 = rows[0]; _i2 <= rows[1]; _i2++) {
+                p1 = this._getCellNW(cols[0], _i2, gridInfo);
+                p2 = this._getCellNW(cols[1], _i2, gridInfo);
+                this.context.moveTo(p1.x, p1.y);
+                this.context.lineTo(p2.x, p2.y);
+            }
+            maptalks.Canvas._stroke(this.context, this._compiledGridStyle['lineOpacity'], p0.x, p0.y);
         }
-        this.context.beginPath();
-        var cols = colRow['cols'],
-            rows = colRow['rows'],
-            gridInfo = colRow['gridInfo'],
-            p0 = colRow['p0'];
-        var p1 = void 0,
-            p2 = void 0;
-        for (var i = cols[0]; i <= cols[1]; i++) {
-            p1 = this._getCellNW(i, rows[0], gridInfo);
-            p2 = this._getCellNW(i, rows[1], gridInfo);
-            this.context.moveTo(p1.x, p1.y);
-            this.context.lineTo(p2.x, p2.y);
-        }
-        for (var _i = rows[0]; _i <= rows[1]; _i++) {
-            p1 = this._getCellNW(cols[0], _i, gridInfo);
-            p2 = this._getCellNW(cols[1], _i, gridInfo);
-            this.context.moveTo(p1.x, p1.y);
-            this.context.lineTo(p2.x, p2.y);
-        }
-        maptalks.Canvas._stroke(this.context, this._compiledGridStyle['lineOpacity'], p0.x, p0.y);
     };
 
-    GridCanvasRenderer.prototype._getProjGridToDraw = function _getProjGridToDraw() {
-        var grid = this.layer.getGrid(),
-            map = this.getMap(),
+    GridCanvasRenderer.prototype._getProjGridToDraw = function _getProjGridToDraw(grid) {
+        var map = this.getMap(),
 
         // projection = map.getProjection(),
         extent = map._get2DExtent(),
@@ -626,18 +705,18 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
             rows: rows,
             width: width,
             height: height,
-            center: center
+            center: center,
+            unit: grid.unit
         };
     };
 
-    GridCanvasRenderer.prototype._getGridToDraw = function _getGridToDraw() {
-        var grid = this.layer.getGrid(),
-            map = this.getMap(),
+    GridCanvasRenderer.prototype._getGridToDraw = function _getGridToDraw(grid, index) {
+        var map = this.getMap(),
 
         // projection = map.getProjection(),
         extent = map.getExtent(),
             gridCenter = new maptalks.Coordinate(grid.center),
-            gridExtent = this.layer.getGridExtent(),
+            gridExtent = this.layer.getGridExtent(index),
             w = grid.width,
             h = grid.height;
 
@@ -663,23 +742,25 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
         return {
             cols: cols,
             rows: rows,
-            center: gridCenter
+            center: gridCenter,
+            unit: grid.unit,
+            width: grid.width,
+            height: grid.height
         };
     };
 
     GridCanvasRenderer.prototype._getCellNWPoint = function _getCellNWPoint(col, row, gridInfo, targetZ) {
-        var map = this.getMap(),
-            grid = this.layer.getGrid();
-        if (grid['unit'] === 'projection') {
+        var map = this.getMap();
+        if (gridInfo['unit'] === 'projection') {
             var p = new maptalks.Point(gridInfo.center.x + col * gridInfo.width, gridInfo.center.y + row * gridInfo.height);
             return map._pointToPointAtZoom(p, targetZ);
-        } else if (grid['unit'] === 'meter') {
-            var center = new maptalks.Coordinate(grid.center);
-            var target = map.locate(center, grid.width * col, grid.height * row);
+        } else if (gridInfo['unit'] === 'meter') {
+            var center = gridInfo.center;
+            var target = map.locate(center, gridInfo.width * col, gridInfo.height * row);
             return map.coordToPoint(target, targetZ);
-        } else if (grid['unit'] === 'degree') {
-            var _center = new maptalks.Coordinate(grid.center);
-            var _target = _center.add(col * grid.width, row * grid.height);
+        } else if (gridInfo['unit'] === 'degree') {
+            var _center = gridInfo.center;
+            var _target = _center.add(col * gridInfo.width, row * gridInfo.height);
             return map.coordToPoint(_target, targetZ);
         }
         return null;
@@ -691,17 +772,16 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
     };
 
     GridCanvasRenderer.prototype._getCellCenter = function _getCellCenter(col, row, gridInfo) {
-        var grid = this.layer.getGrid(),
-            map = this.getMap();
-        if (grid['unit'] === 'projection') {
+        var map = this.getMap();
+        if (gridInfo['unit'] === 'projection') {
             var p = new maptalks.Point(gridInfo.center.x + (col + 1 / 2) * gridInfo.width, gridInfo.center.y + (row + 1 / 2) * gridInfo.height);
             return map.pointToCoordinate(p);
-        } else if (grid['unit'] === 'meter') {
-            var center = new maptalks.Coordinate(grid.center);
-            return map.locate(center, grid.width * (col + 1 / 2), grid.height * (row + 1 / 2));
-        } else if (grid['unit'] === 'degree') {
-            var _center2 = new maptalks.Coordinate(grid.center);
-            return _center2.add(grid.width * (col + 1 / 2), grid.height * (row + 1 / 2));
+        } else if (gridInfo['unit'] === 'meter') {
+            var center = gridInfo.center;
+            return map.locate(center, gridInfo.width * (col + 1 / 2), gridInfo.height * (row + 1 / 2));
+        } else if (gridInfo['unit'] === 'degree') {
+            var _center2 = gridInfo.center;
+            return _center2.add(gridInfo.width * (col + 1 / 2), gridInfo.height * (row + 1 / 2));
         }
         return null;
     };
@@ -709,19 +789,31 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
     GridCanvasRenderer.prototype._drawData = function _drawData() {
         var _this3 = this;
 
-        var grid = this.layer.getGrid(),
-            gridInfo = grid['unit'] === 'projection' ? this._getProjGridToDraw() : this._getGridToDraw(),
-            data = grid['data'];
-        if (!gridInfo || !Array.isArray(data) || !data.length) {
-            return;
-        }
-        data.forEach(function (gridData, index) {
-            if (!gridData[2]['symbol']) {
-                return;
+        var count = this.layer.getGridCount();
+
+        var _loop2 = function _loop2(i) {
+            var grid = _this3.layer.getGrid(i),
+                gridInfo = grid['unit'] === 'projection' ? _this3._getProjGridToDraw(grid, i) : _this3._getGridToDraw(grid, i),
+                data = grid['data'];
+            if (!Array.isArray(data) || !data.length) {
+                return {
+                    v: void 0
+                };
             }
-            _this3._drawDataGrid(gridData, _this3._compiledSymbols[index], gridInfo);
-            _this3._drawLabel(gridData, index, gridInfo);
-        });
+            data.forEach(function (gridData, index) {
+                if (!gridData[2]['symbol'] || !gridInfo) {
+                    return;
+                }
+                _this3._drawDataGrid(gridData, _this3._compiledSymbols[i][index], gridInfo);
+                _this3._drawLabel(gridData, index, gridInfo);
+            });
+        };
+
+        for (var i = 0; i < count; i++) {
+            var _ret3 = _loop2(i);
+
+            if ((typeof _ret3 === 'undefined' ? 'undefined' : _typeof(_ret3)) === "object") return _ret3.v;
+        }
     };
 
     GridCanvasRenderer.prototype._drawDataGrid = function _drawDataGrid(gridData, symbol, gridInfo) {
@@ -829,7 +921,9 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
             line._bindLayer(this.layer);
             dataMarkers[index] = line;
         } else {
+            var redraw = this._toRedraw;
             line.setCoordinates(coordinates);
+            this._toRedraw = redraw;
         }
         line._getPainter().paint();
     };
@@ -2877,8 +2971,26 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
         this.draw();
     };
 
-    GridGLRenderer.prototype.redraw = function redraw() {
-        this.setToRedraw();
+    GridGLRenderer.prototype.reset = function reset() {
+        var _this2 = this;
+
+        _GridCanvasRenderer.prototype.reset.call(this);
+        delete this.paintedGridNum;
+        delete this._dataVertices;
+        delete this._dataColors;
+        delete this._dataIndices;
+        if (this.gl) {
+            if (this._buffers) {
+                this._buffers.forEach(function (buffer) {
+                    _this2.gl.deleteBuffer(buffer);
+                });
+            }
+        }
+        delete this.gridBuffer;
+        delete this.dataGridBuffer;
+        delete this.dataGridIndexBuffer;
+        delete this.dataColorsBuffer;
+        this._buffers = [];
     };
 
     GridGLRenderer.prototype._meterToPoint = function _meterToPoint(center, altitude) {
@@ -2904,60 +3016,74 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
     };
 
     GridGLRenderer.prototype._drawGrid = function _drawGrid() {
-        var colRow = this._preDrawGrid();
-        if (!colRow) {
-            return;
-        }
-
-        var cols = colRow['cols'],
-            rows = colRow['rows'],
-            gridInfo = colRow['gridInfo'];
-        var p1 = void 0,
-            p2 = void 0;
-        var map = this.getMap(),
-            zoom = map.getGLZoom(),
-            altitude = this.layer.options['altitude'];
-        var z = 0;
-        if (altitude) {
-            z = this._meterToPoint(map.getCenter(), altitude);
-        }
-
-        var count = (cols[1] - cols[0] + 1) * 6 + (rows[1] - rows[0] + 1) * 6;
-        var vertices = new Float32Array(count);
-        var c = 0;
-        var set$$1 = function set$$1(p) {
-            vertices[c++] = p;
-        };
-        //划线
-        for (var i = cols[0]; i <= cols[1]; i++) {
-            p1 = this._getCellNWPoint(i, rows[0], gridInfo, zoom);
-            p2 = this._getCellNWPoint(i, rows[1], gridInfo, zoom);
-            [p1.x, p1.y, z, p2.x, p2.y, z].forEach(set$$1);
-        }
-        for (var _i = rows[0]; _i <= rows[1]; _i++) {
-            p1 = this._getCellNWPoint(cols[0], _i, gridInfo, zoom);
-            p2 = this._getCellNWPoint(cols[1], _i, gridInfo, zoom);
-            [p1.x, p1.y, z, p2.x, p2.y, z].forEach(set$$1);
-        }
+        var _this3 = this;
 
         if (!this.gridBuffer) {
-            this.gridBuffer = this.createBuffer();
+            this.gridBuffer = [];
         }
-        var gl = this.gl;
-        gl.lineWidth(this._compiledGridStyle.lineWidth || 1);
-
         this._useGridProgram();
-        this._updateUniforms();
+        var colRows = this._preDrawGrid();
 
-        gl.uniform1f(this.program['u_opacity'], this._compiledGridStyle.lineOpacity || 1);
-        var color$$1 = color(this._compiledGridStyle.lineColor || '#000').rgbaArrayNormalized();
-        gl.uniform4fv(this.program['u_color'], color$$1 || [0, 0, 0, 1]);
+        var _loop = function _loop(i) {
+            var colRow = colRows[i];
+            if (!colRow) {
+                return 'continue';
+            }
+            var cols = colRow['cols'],
+                rows = colRow['rows'],
+                gridInfo = colRow['gridInfo'];
+            var p1 = void 0,
+                p2 = void 0;
+            var map = _this3.getMap(),
+                zoom = map.getGLZoom(),
+                altitude = _this3.layer.options['altitude'];
+            var z = 0;
+            if (altitude) {
+                z = _this3._meterToPoint(map.getCenter(), altitude);
+            }
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.gridBuffer);
-        this.enableVertexAttrib(['a_position', 3]);
-        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
-        gl.drawArrays(gl.LINES, 0, vertices.length / 3);
-        gl.lineWidth(1);
+            var count = (cols[1] - cols[0] + 1) * 6 + (rows[1] - rows[0] + 1) * 6;
+            var vertices = new Float32Array(count);
+            var c = 0;
+            var set$$1 = function set$$1(p) {
+                vertices[c++] = p;
+            };
+            //划线
+            for (var _i = cols[0]; _i <= cols[1]; _i++) {
+                p1 = _this3._getCellNWPoint(_i, rows[0], gridInfo, zoom);
+                p2 = _this3._getCellNWPoint(_i, rows[1], gridInfo, zoom);
+                [p1.x, p1.y, z, p2.x, p2.y, z].forEach(set$$1);
+            }
+            for (var _i2 = rows[0]; _i2 <= rows[1]; _i2++) {
+                p1 = _this3._getCellNWPoint(cols[0], _i2, gridInfo, zoom);
+                p2 = _this3._getCellNWPoint(cols[1], _i2, gridInfo, zoom);
+                [p1.x, p1.y, z, p2.x, p2.y, z].forEach(set$$1);
+            }
+
+            if (!_this3.gridBuffer[i]) {
+                _this3.gridBuffer[i] = _this3.createBuffer();
+            }
+            var gl = _this3.gl;
+            gl.lineWidth(_this3._compiledGridStyle.lineWidth || 1);
+
+            _this3._updateUniforms();
+
+            gl.uniform1f(_this3.program['u_opacity'], _this3._compiledGridStyle.lineOpacity || 1);
+            var color$$1 = color(_this3._compiledGridStyle.lineColor || '#000').rgbaArrayNormalized();
+            gl.uniform4fv(_this3.program['u_color'], color$$1 || [0, 0, 0, 1]);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, _this3.gridBuffer[i]);
+            gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
+            _this3.enableVertexAttrib(['a_position', 3]);
+            gl.drawArrays(gl.LINES, 0, vertices.length / 3);
+            gl.lineWidth(1);
+        };
+
+        for (var i = 0; i < colRows.length; i++) {
+            var _ret = _loop(i);
+
+            if (_ret === 'continue') continue;
+        }
     };
 
     GridGLRenderer.prototype._useDataGridProgram = function _useDataGridProgram() {
@@ -2969,61 +3095,84 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
     };
 
     GridGLRenderer.prototype._glDrawDataGrid = function _glDrawDataGrid() {
-        var _this2 = this;
+        var _this4 = this;
 
-        var grid = this.layer.getGrid(),
-            gridInfo = grid['unit'] === 'projection' ? this._getProjGridToDraw() : this._getGridToDraw(),
-            data = grid['data'];
-        if (!gridInfo || !Array.isArray(data) || !data.length) {
-            return;
-        }
-
-        var isDynamic = maptalks.Util.isFunction(grid.offset);
-        var vertices = this._dataVertices || [],
-            colors = this._dataColors || [];
-        var indices = this._dataIndices || [];
-        if (!this.paintedGridNum || isDynamic) {
-            var c = 0;
-            data.forEach(function (gridData, index) {
-                if (!gridData[2]['symbol']) {
-                    return;
-                }
-                c = _this2._drawDataGrid({ vertices: vertices, colors: colors, indices: indices }, c, gridData, _this2._compiledSymbols[index], gridInfo);
-            });
-        }
-
-        if (!this.dataGridBuffer) {
-            vertices = this._dataVertices = new Float32Array(vertices);
-            colors = this._dataColors = new Uint8Array(colors);
-            indices = this._dataIndices = new Uint32Array(indices);
-            this.dataGridBuffer = this.createBuffer();
-            this.dataGridIndexBuffer = this.createBuffer();
-            this.dataColorsBuffer = this.createBuffer();
+        if (!this.paintedGridNum) {
+            this.paintedGridNum = [];
+            this._dataVertices = [];
+            this._dataColors = [];
+            this._dataIndices = [];
+            this.dataGridBuffer = [];
+            this.dataGridIndexBuffer = [];
+            this.dataColorsBuffer = [];
         }
         var gl = this.gl;
-
         this._useDataGridProgram();
-        this._updateUniforms();
+        var count = this.layer.getGridCount();
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.dataColorsBuffer);
-        this.enableVertexAttrib([['a_color', 3, 'UNSIGNED_BYTE'], ['a_opacity', 1, 'UNSIGNED_BYTE']]);
-        if (colors.length > 0) {
-            gl.bufferData(gl.ARRAY_BUFFER, colors, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+        var _loop2 = function _loop2(i) {
+            var grid = _this4.layer.getGrid(i),
+                gridInfo = grid['unit'] === 'projection' ? _this4._getProjGridToDraw(grid, i) : _this4._getGridToDraw(grid, i),
+                data = grid['data'];
+            if (!gridInfo || !Array.isArray(data) || !data.length) {
+                return 'continue';
+            }
+
+            var isDynamic = maptalks.Util.isFunction(grid.offset);
+            var vertices = _this4._dataVertices[i] || [],
+                colors = _this4._dataColors[i] || [];
+            var indices = _this4._dataIndices[i] || [];
+            if (!_this4.paintedGridNum[i] || isDynamic) {
+                var _c = 0;
+                data.forEach(function (gridData, index) {
+                    if (!gridData[2]['symbol']) {
+                        return;
+                    }
+                    _c = _this4._drawDataGrid({ vertices: vertices, colors: colors, indices: indices }, _c, gridData, _this4._compiledSymbols[i][index], gridInfo);
+                });
+            }
+
+            if (!_this4.dataGridBuffer[i]) {
+                vertices = _this4._dataVertices[i] = new Float32Array(vertices);
+                colors = _this4._dataColors[i] = new Uint8Array(colors);
+                indices = _this4._dataIndices[i] = new Uint32Array(indices);
+                _this4.dataGridBuffer[i] = _this4.createBuffer();
+                _this4.dataGridIndexBuffer[i] = _this4.createBuffer();
+                _this4.dataColorsBuffer[i] = _this4.createBuffer();
+            }
+
+            _this4._updateUniforms();
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, _this4.dataGridBuffer[i]);
+            _this4.enableVertexAttrib([['a_position', 3]]);
+            if (vertices.length > 0) {
+                gl.bufferData(gl.ARRAY_BUFFER, vertices, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+            }
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, _this4.dataColorsBuffer[i]);
+            _this4.enableVertexAttrib([['a_color', 3, 'UNSIGNED_BYTE'], ['a_opacity', 1, 'UNSIGNED_BYTE']]);
+            if (colors.length > 0) {
+                gl.bufferData(gl.ARRAY_BUFFER, colors, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+            }
+
+            // Write the indices to the buffer object
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, _this4.dataGridIndexBuffer[i]);
+            if (indices.length > 0) {
+                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+                _this4.paintedGridNum[i] = indices.length;
+            }
+            gl.drawElements(gl.TRIANGLES, _this4.paintedGridNum[i], gl.UNSIGNED_INT, 0);
+        };
+
+        for (var i = 0; i < count; i++) {
+            var _ret2 = _loop2(i);
+
+            if (_ret2 === 'continue') continue;
         }
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.dataGridBuffer);
-        this.enableVertexAttrib([['a_position', 3]]);
-        if (vertices.length > 0) {
-            gl.bufferData(gl.ARRAY_BUFFER, vertices, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
-        }
-
-        // Write the indices to the buffer object
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.dataGridIndexBuffer);
-        if (indices.length > 0) {
-            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, isDynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
-            this.paintedGridNum = indices.length;
-        }
-        gl.drawElements(gl.TRIANGLES, this.paintedGridNum, gl.UNSIGNED_INT, 0);
+        gl.disableVertexAttribArray(gl.getAttribLocation(gl.program, 'a_position'));
+        gl.disableVertexAttribArray(gl.getAttribLocation(gl.program, 'a_color'));
+        gl.disableVertexAttribArray(gl.getAttribLocation(gl.program, 'a_opacity'));
     };
 
     GridGLRenderer.prototype._drawDataGrid = function _drawDataGrid(_ref, c, gridData, symbol, gridInfo) {
@@ -3107,17 +3256,27 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
     };
 
     GridGLRenderer.prototype._drawAllLabels = function _drawAllLabels() {
-        var _this3 = this;
+        var _this5 = this;
 
-        var grid = this.layer.getGrid(),
-            gridInfo = grid['unit'] === 'projection' ? this._getProjGridToDraw() : this._getGridToDraw(),
-            data = grid['data'];
-        if (!gridInfo || !Array.isArray(data) || !data.length) {
-            return;
+        var count = this.layer.getGridCount();
+
+        var _loop3 = function _loop3(i) {
+            var grid = _this5.layer.getGrid(i),
+                gridInfo = grid['unit'] === 'projection' ? _this5._getProjGridToDraw(grid, i) : _this5._getGridToDraw(grid, i),
+                data = grid['data'];
+            if (!gridInfo || !Array.isArray(data) || !data.length) {
+                return 'continue';
+            }
+            data.forEach(function (gridData, index) {
+                _this5._drawLabel(gridData, index, gridInfo);
+            });
+        };
+
+        for (var i = 0; i < count; i++) {
+            var _ret3 = _loop3(i);
+
+            if (_ret3 === 'continue') continue;
         }
-        data.forEach(function (gridData, index) {
-            _this3._drawLabel(gridData, index, gridInfo);
-        });
     };
 
     GridGLRenderer.prototype.onRemove = function onRemove() {
@@ -3143,6 +3302,7 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
         gl.deleteProgram(program);
         gl.deleteShader(program.fragmentShader);
         gl.deleteShader(program.vertexShader);
+        delete this.paintedGridNum;
         delete this._dataVertices;
         delete this._dataColors;
         delete this._dataIndices;
@@ -3225,27 +3385,27 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
                 STRIDE += attributes[i][1] || 0;
             }
             var offset = 0;
-            for (var _i2 = 0; _i2 < attributes.length; _i2++) {
-                var attr = gl.getAttribLocation(gl.program, attributes[_i2][0]);
+            for (var _i3 = 0; _i3 < attributes.length; _i3++) {
+                var attr = gl.getAttribLocation(gl.program, attributes[_i3][0]);
                 if (attr < 0) {
-                    throw new Error('Failed to get the storage location of ' + attributes[_i2][0]);
+                    throw new Error('Failed to get the storage location of ' + attributes[_i3][0]);
                 }
                 var FSIZE = void 0;
-                if (!attributes[_i2][2] || attributes[_i2][2] === 'FLOAT') {
+                if (!attributes[_i3][2] || attributes[_i3][2] === 'FLOAT') {
                     FSIZE = 4;
-                } else if (attributes[_i2][2] === 'BYTE' || attributes[_i2][2] === 'UNSIGNED_BYTE') {
+                } else if (attributes[_i3][2] === 'BYTE' || attributes[_i3][2] === 'UNSIGNED_BYTE') {
                     FSIZE = 1;
                 } else {
                     FSIZE = 2;
                 }
-                gl.vertexAttribPointer(attr, attributes[_i2][1], gl[attributes[_i2][2] || 'FLOAT'], false, FSIZE * STRIDE, FSIZE * offset);
-                offset += attributes[_i2][1] || 0;
                 gl.enableVertexAttribArray(attr);
+                gl.vertexAttribPointer(attr, attributes[_i3][1], gl[attributes[_i3][2] || 'FLOAT'], false, FSIZE * STRIDE, FSIZE * offset);
+                offset += attributes[_i3][1] || 0;
             }
         } else {
             var _attr = gl.getAttribLocation(gl.program, attributes[0]);
-            gl.vertexAttribPointer(_attr, attributes[1], gl[attributes[2] || 'FLOAT'], false, 0, 0);
             gl.enableVertexAttribArray(_attr);
+            gl.vertexAttribPointer(_attr, attributes[1], gl[attributes[2] || 'FLOAT'], false, 0, 0);
         }
     };
 
@@ -3414,6 +3574,6 @@ exports.GridLayer = GridLayer;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.5.1, requires maptalks@>=0.36.0.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.0, requires maptalks@>=0.36.0.');
 
 })));
