@@ -102,6 +102,7 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
     }
 
     _preDrawGrid() {
+        const map = this.getMap();
         const count = this.layer.getGridCount();
         const gridInfos = [];
         for (let i = 0; i < count; i++) {
@@ -112,24 +113,34 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
                 continue;
             }
             const cols = gridInfo.cols,
-                rows = gridInfo.rows,
-                width = gridInfo.width,
-                height = gridInfo.height,
-                p0 = this._getCellNW(cols[0], rows[0], gridInfo);
-            let p2;
-            if (width < 0.5 || height < 0.5 || (this._compiledGridStyle['polygonOpacity'] > 0 || this._compiledGridStyle['polygonColor'] || this._compiledGridStyle['polygonPatternFile'])) {
-                p2 = this._getCellNW(cols[1] + 1, rows[1] + 1, gridInfo);
-                this.context.beginPath();
-                this.context.rect(p0.x, p0.y, p2.x - p0.x, p2.y - p0.y);
-                this.context.fillStyle = this._compiledGridStyle.lineColor;
-                if (this._compiledGridStyle['polygonOpacity'] > 0) {
-                    maptalks.Canvas.fillCanvas(this.context, this._compiledGridStyle['polygonOpacity'], p0.x, p0.y);
-                } else {
-                    maptalks.Canvas.fillCanvas(this.context, 1, p0.x, p0.y);
-                }
-                if (width < 0.5 || height < 0.5) {
-                    gridInfos.push(null);
-                    continue;
+                rows = gridInfo.rows;
+            const p0 = this._getCellNW(cols[0], rows[0], gridInfo);
+            if (map.getPitch() === 0) {
+                const p1 = this._getCellNW(cols[0] + 1, rows[0] + 1, gridInfo);
+                const width = Math.abs(p0.x - p1.x);
+                const height = Math.abs(p0.y - p1.y);
+                if (width < 0.5 || height < 0.5 || (this._compiledGridStyle['polygonOpacity'] > 0 || this._compiledGridStyle['polygonColor'] || this._compiledGridStyle['polygonPatternFile'])) {
+                    const p2 = this._getCellNW(cols[1] + 1, rows[0], gridInfo);
+                    const p3 = this._getCellNW(cols[1] + 1, rows[1] + 1, gridInfo);
+                    const p4 = this._getCellNW(cols[0], rows[1] + 1, gridInfo);
+                    this.context.beginPath();
+                    // this.context.rect(p0.x, p0.y, p2.x - p0.x, p2.y - p0.y);
+                    this.context.moveTo(p0.x, p0.y);
+                    this.context.lineTo(p2.x, p2.y);
+                    this.context.lineTo(p3.x, p3.y);
+                    this.context.lineTo(p4.x, p4.y);
+                    this.context.closePath();
+
+                    this.context.fillStyle = this._compiledGridStyle.lineColor;
+                    if (this._compiledGridStyle['polygonOpacity'] > 0) {
+                        maptalks.Canvas.fillCanvas(this.context, this._compiledGridStyle['polygonOpacity'], p0.x, p0.y);
+                    } else {
+                        maptalks.Canvas.fillCanvas(this.context, 1, p0.x, p0.y);
+                    }
+                    if (width < 0.5 || height < 0.5) {
+                        gridInfos.push(null);
+                        continue;
+                    }
                 }
             }
             gridInfos.push({
