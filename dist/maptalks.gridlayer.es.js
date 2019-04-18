@@ -1,5 +1,5 @@
 /*!
- * maptalks.gridlayer v0.6.0
+ * maptalks.gridlayer v0.6.1
  * LICENSE : MIT
  * (c) 2016-2019 maptalks.org
  */
@@ -606,6 +606,7 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
     };
 
     GridCanvasRenderer.prototype._preDrawGrid = function _preDrawGrid() {
+        var map = this.getMap();
         var count = this.layer.getGridCount();
         var gridInfos = [];
         for (var i = 0; i < count; i++) {
@@ -616,24 +617,34 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
                 continue;
             }
             var cols = gridInfo.cols,
-                rows = gridInfo.rows,
-                width = gridInfo.width,
-                height = gridInfo.height,
-                p0 = this._getCellNW(cols[0], rows[0], gridInfo);
-            var p2 = void 0;
-            if (width < 0.5 || height < 0.5 || this._compiledGridStyle['polygonOpacity'] > 0 || this._compiledGridStyle['polygonColor'] || this._compiledGridStyle['polygonPatternFile']) {
-                p2 = this._getCellNW(cols[1] + 1, rows[1] + 1, gridInfo);
-                this.context.beginPath();
-                this.context.rect(p0.x, p0.y, p2.x - p0.x, p2.y - p0.y);
-                this.context.fillStyle = this._compiledGridStyle.lineColor;
-                if (this._compiledGridStyle['polygonOpacity'] > 0) {
-                    Canvas.fillCanvas(this.context, this._compiledGridStyle['polygonOpacity'], p0.x, p0.y);
-                } else {
-                    Canvas.fillCanvas(this.context, 1, p0.x, p0.y);
-                }
-                if (width < 0.5 || height < 0.5) {
-                    gridInfos.push(null);
-                    continue;
+                rows = gridInfo.rows;
+            var p0 = this._getCellNW(cols[0], rows[0], gridInfo);
+            if (map.getPitch() === 0) {
+                var p1 = this._getCellNW(cols[0] + 1, rows[0] + 1, gridInfo);
+                var width = Math.abs(p0.x - p1.x);
+                var height = Math.abs(p0.y - p1.y);
+                if (width < 0.5 || height < 0.5 || this._compiledGridStyle['polygonOpacity'] > 0 || this._compiledGridStyle['polygonColor'] || this._compiledGridStyle['polygonPatternFile']) {
+                    var p2 = this._getCellNW(cols[1] + 1, rows[0], gridInfo);
+                    var p3 = this._getCellNW(cols[1] + 1, rows[1] + 1, gridInfo);
+                    var p4 = this._getCellNW(cols[0], rows[1] + 1, gridInfo);
+                    this.context.beginPath();
+                    // this.context.rect(p0.x, p0.y, p2.x - p0.x, p2.y - p0.y);
+                    this.context.moveTo(p0.x, p0.y);
+                    this.context.lineTo(p2.x, p2.y);
+                    this.context.lineTo(p3.x, p3.y);
+                    this.context.lineTo(p4.x, p4.y);
+                    this.context.closePath();
+
+                    this.context.fillStyle = this._compiledGridStyle.lineColor;
+                    if (this._compiledGridStyle['polygonOpacity'] > 0) {
+                        Canvas.fillCanvas(this.context, this._compiledGridStyle['polygonOpacity'], p0.x, p0.y);
+                    } else {
+                        Canvas.fillCanvas(this.context, 1, p0.x, p0.y);
+                    }
+                    if (width < 0.5 || height < 0.5) {
+                        gridInfos.push(null);
+                        continue;
+                    }
                 }
             }
             gridInfos.push({
@@ -3568,4 +3579,4 @@ GridLayer.mergeOptions({
 
 export { GridLayer };
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.0, requires maptalks@>=0.36.0.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.1, requires maptalks@>=0.36.0.');
