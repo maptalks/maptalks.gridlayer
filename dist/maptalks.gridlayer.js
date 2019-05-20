@@ -1,5 +1,5 @@
 /*!
- * maptalks.gridlayer v0.6.1
+ * maptalks.gridlayer v0.6.2
  * LICENSE : MIT
  * (c) 2016-2019 maptalks.org
  */
@@ -292,7 +292,7 @@ var GridLayer = function (_maptalks$Layer) {
             });
         } else if (grid['unit'] === 'meter') {
             // distance in geographic meters
-            var sw = map.locate(center, -w * cols[0], -h * rows[0]),
+            var sw = map.locate(center, w * cols[0], h * rows[0]),
                 ne = map.locate(center, w * cols[1], h * rows[1]);
             return new maptalks.Extent(sw, ne);
         } else if (grid['unit'] === 'degree') {
@@ -334,7 +334,9 @@ var GridLayer = function (_maptalks$Layer) {
                 _col = Math.floor(distX / grid.width);
             var distY = map.computeLength(new maptalks.Coordinate(gridCenter.x, coordinate.y), gridCenter),
                 _row = Math.floor(distY / grid.height);
-            return [_col, _row];
+            var dx = coordinate.x > gridCenter.x ? 1 : -1;
+            var dy = coordinate.y > gridCenter.y ? -1 : 1;
+            return [_col * dx, _row * dy];
         } else if (grid['unit'] === 'degree') {
             var _distX = coordinate.x - gridCenter.x,
                 _col2 = Math.floor(_distX / grid.width);
@@ -373,9 +375,21 @@ var GridLayer = function (_maptalks$Layer) {
                 h = map.computeLength(nw, sw);
             return new maptalks.Rectangle(nw, w, h);
         } else if (grid['unit'] === 'meter') {
-            return null;
+            var _width = grid.width,
+                _height = grid.height;
+
+            var _nw = map.locate(gridCenter, col * _width, -row * _height);
+            return new maptalks.Rectangle(_nw, _width, _height);
         } else if (grid['unit'] === 'degree') {
-            return gridCenter.add(grid.width * col, grid.height * row);
+            var _width2 = grid.width,
+                _height2 = grid.height;
+
+            var _nw2 = gridCenter.add(col * _width2, -row * _height2);
+            var _ne2 = _nw2.add(_width2, 0);
+            var _sw2 = _nw2.add(0, -_height2);
+            var _w = map.computeLength(_nw2, _ne2),
+                _h = map.computeLength(_nw2, _sw2);
+            return new maptalks.Rectangle(_nw2, _w, _h);
         }
         return null;
     };
@@ -741,13 +755,14 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
         if (grid['unit'] === 'meter') {
             var dx1 = map.computeLength(new maptalks.Coordinate(intersection.xmin, gridCenter.y), gridCenter),
                 dx2 = map.computeLength(new maptalks.Coordinate(intersection.xmax, gridCenter.y), gridCenter);
-            var dy1 = map.computeLength(new maptalks.Coordinate(gridCenter.y, intersection.ymin), gridCenter),
-                dy2 = map.computeLength(new maptalks.Coordinate(intersection.ymax, gridCenter.y), gridCenter);
+            //经纬度里，ymax在上方，ymin在下方，和projection时是反的
+            var dy1 = map.computeLength(new maptalks.Coordinate(gridCenter.x, intersection.ymax), gridCenter),
+                dy2 = map.computeLength(new maptalks.Coordinate(gridCenter.x, intersection.ymin), gridCenter);
             cols = [-Math.ceil(dx1 / grid.width), Math.ceil(dx2 / grid.width)];
             rows = [-Math.ceil(dy1 / grid.height), Math.ceil(dy2 / grid.height)];
         } else if (grid['unit'] === 'degree') {
             cols = [-Math.ceil((gridCenter.x - intersection.xmin - delta) / w), Math.ceil((intersection.xmax - gridCenter.x - delta) / w)];
-            rows = [-Math.ceil((gridCenter.y - intersection.ymin - delta) / h), Math.ceil((intersection.ymax - gridCenter.y - delta) / h)];
+            rows = [-Math.ceil((intersection.ymax - gridCenter.y - delta) / h), Math.ceil((gridCenter.y - intersection.ymin - delta) / h)];
         }
 
         return {
@@ -767,11 +782,11 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
             return map._pointToPointAtZoom(p, targetZ);
         } else if (gridInfo['unit'] === 'meter') {
             var center = gridInfo.center;
-            var target = map.locate(center, gridInfo.width * col, gridInfo.height * row);
+            var target = map.locate(center, gridInfo.width * col, -gridInfo.height * row);
             return map.coordToPoint(target, targetZ);
         } else if (gridInfo['unit'] === 'degree') {
             var _center = gridInfo.center;
-            var _target = _center.add(col * gridInfo.width, row * gridInfo.height);
+            var _target = _center.add(col * gridInfo.width, -row * gridInfo.height);
             return map.coordToPoint(_target, targetZ);
         }
         return null;
@@ -789,10 +804,10 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
             return map.pointToCoordinate(p);
         } else if (gridInfo['unit'] === 'meter') {
             var center = gridInfo.center;
-            return map.locate(center, gridInfo.width * (col + 1 / 2), gridInfo.height * (row + 1 / 2));
+            return map.locate(center, gridInfo.width * (col + 1 / 2), -gridInfo.height * (row + 1 / 2));
         } else if (gridInfo['unit'] === 'degree') {
             var _center2 = gridInfo.center;
-            return _center2.add(gridInfo.width * (col + 1 / 2), gridInfo.height * (row + 1 / 2));
+            return _center2.add(gridInfo.width * (col + 1 / 2), -gridInfo.height * (row + 1 / 2));
         }
         return null;
     };
@@ -3585,6 +3600,6 @@ exports.GridLayer = GridLayer;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.1, requires maptalks@>=0.36.0.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.2, requires maptalks@>=0.36.0.');
 
 })));
