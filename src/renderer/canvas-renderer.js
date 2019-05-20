@@ -241,8 +241,9 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
         if (grid['unit'] === 'meter') {
             const dx1 = map.computeLength(new maptalks.Coordinate(intersection.xmin, gridCenter.y), gridCenter),
                 dx2 = map.computeLength(new maptalks.Coordinate(intersection.xmax, gridCenter.y), gridCenter);
-            const dy1 = map.computeLength(new maptalks.Coordinate(gridCenter.y, intersection.ymin), gridCenter),
-                dy2 = map.computeLength(new maptalks.Coordinate(intersection.ymax, gridCenter.y), gridCenter);
+            //经纬度里，ymax在上方，ymin在下方，和projection时是反的
+            const dy1 = map.computeLength(new maptalks.Coordinate(gridCenter.x, intersection.ymax), gridCenter),
+                dy2 = map.computeLength(new maptalks.Coordinate(gridCenter.x, intersection.ymin), gridCenter);
             cols = [
                 -Math.ceil(dx1 / grid.width),
                 Math.ceil(dx2 / grid.width)
@@ -257,8 +258,8 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
                 Math.ceil((intersection.xmax - gridCenter.x - delta) / w)
             ];
             rows = [
-                -Math.ceil((gridCenter.y - intersection.ymin - delta) / h),
-                Math.ceil((intersection.ymax - gridCenter.y - delta) / h)
+                -Math.ceil((intersection.ymax - gridCenter.y - delta) / h),
+                Math.ceil((gridCenter.y - intersection.ymin - delta) / h)
             ];
         }
 
@@ -282,11 +283,11 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
             return map._pointToPointAtZoom(p, targetZ);
         } else if (gridInfo['unit'] === 'meter') {
             const center = gridInfo.center;
-            const target = map.locate(center, gridInfo.width * col, gridInfo.height * row);
+            const target = map.locate(center, gridInfo.width * col, -gridInfo.height * row);
             return map.coordToPoint(target, targetZ);
         } else if (gridInfo['unit'] === 'degree') {
             const center = gridInfo.center;
-            const target = center.add(col * gridInfo.width, row * gridInfo.height);
+            const target = center.add(col * gridInfo.width, -row * gridInfo.height);
             return map.coordToPoint(target, targetZ);
         }
         return null;
@@ -307,10 +308,10 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
             return map.pointToCoordinate(p);
         } else if (gridInfo['unit'] === 'meter') {
             const center = gridInfo.center;
-            return map.locate(center, gridInfo.width * (col + 1 / 2), gridInfo.height * (row + 1 / 2));
+            return map.locate(center, gridInfo.width * (col + 1 / 2), -gridInfo.height * (row + 1 / 2));
         } else if (gridInfo['unit'] === 'degree') {
             const center = gridInfo.center;
-            return center.add(gridInfo.width * (col + 1 / 2), gridInfo.height * (row + 1 / 2));
+            return center.add(gridInfo.width * (col + 1 / 2), -gridInfo.height * (row + 1 / 2));
         }
         return null;
     }

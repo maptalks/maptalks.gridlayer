@@ -169,7 +169,7 @@ export class GridLayer extends maptalks.Layer {
             return new maptalks.Extent(xmin, ymin, xmax, ymax).convertTo(c => projection.unproject(c));
         } else if (grid['unit'] === 'meter') {
             // distance in geographic meters
-            const sw = map.locate(center, -w * cols[0], -h * rows[0]),
+            const sw = map.locate(center, w * cols[0], h * rows[0]),
                 ne = map.locate(center, w * cols[1], h * rows[1]);
             return new maptalks.Extent(sw, ne);
         } else if (grid['unit'] === 'degree') {
@@ -207,7 +207,9 @@ export class GridLayer extends maptalks.Layer {
                 col = Math.floor(distX / grid.width);
             const distY = map.computeLength(new maptalks.Coordinate(gridCenter.x, coordinate.y), gridCenter),
                 row = Math.floor(distY / grid.height);
-            return [col, row];
+            const dx = coordinate.x > gridCenter.x ? 1 : -1;
+            const dy = coordinate.y > gridCenter.y ? -1 : 1;
+            return [col * dx, row * dy];
         } else if (grid['unit'] === 'degree') {
             const distX = coordinate.x - gridCenter.x,
                 col = Math.floor(distX / grid.width);
@@ -242,9 +244,17 @@ export class GridLayer extends maptalks.Layer {
                 h = map.computeLength(nw, sw);
             return new maptalks.Rectangle(nw, w, h);
         } else if (grid['unit'] === 'meter') {
-            return null;
+            const { width, height } = grid;
+            const nw = map.locate(gridCenter, col * width, -row * height);
+            return new maptalks.Rectangle(nw, width, height);
         } else if (grid['unit'] === 'degree') {
-            return gridCenter.add(grid.width * col, grid.height * row);
+            const { width, height } = grid;
+            const nw = gridCenter.add(col * width, -row * height);
+            const ne = nw.add(width, 0);
+            const sw = nw.add(0, -height);
+            const w = map.computeLength(nw, ne),
+                h = map.computeLength(nw, sw);
+            return new maptalks.Rectangle(nw, w, h);
         }
         return null;
     }
