@@ -12,16 +12,18 @@ gulp.task('build', () => {
     return bundleHelper.bundle('src/index.js');
 });
 
-gulp.task('minify', gulp.series('build', () => {
+gulp.task('minify', gulp.series('build', done => {
     bundleHelper.minify();
+    done();
 }));
 
 gulp.task('watch', gulp.series('build', () => {
     gulp.watch(['src/**/*.js', './gulpfile.js'],  gulp.series('build'));
 }));
 
-gulp.task('test', gulp.series('build', () => {
+gulp.task('test', gulp.series('build', done => {
     testHelper.test(karmaConfig);
+    done();
 }));
 
 gulp.task('tdd', gulp.series('build', () => {
