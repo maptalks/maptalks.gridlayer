@@ -245,12 +245,12 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
             const dy1 = map.computeLength(new maptalks.Coordinate(gridCenter.x, intersection.ymax), gridCenter),
                 dy2 = map.computeLength(new maptalks.Coordinate(gridCenter.x, intersection.ymin), gridCenter);
             cols = [
-                -Math.ceil(dx1 / grid.width),
-                Math.ceil(dx2 / grid.width)
+                -Math.round(dx1 / grid.width),
+                Math.round(dx2 / grid.width)
             ];
             rows = [
-                -Math.ceil(dy1 / grid.height),
-                Math.ceil(dy2 / grid.height)
+                -Math.round(dy1 / grid.height),
+                Math.round(dy2 / grid.height)
             ];
         } else if (grid['unit'] === 'degree') {
             cols = [
