@@ -1,5 +1,5 @@
 /*!
- * maptalks.gridlayer v0.6.2
+ * maptalks.gridlayer v0.6.3
  * LICENSE : MIT
  * (c) 2016-2019 maptalks.org
  */
@@ -754,8 +754,8 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
             //经纬度里，ymax在上方，ymin在下方，和projection时是反的
             var dy1 = map.computeLength(new Coordinate(gridCenter.x, intersection.ymax), gridCenter),
                 dy2 = map.computeLength(new Coordinate(gridCenter.x, intersection.ymin), gridCenter);
-            cols = [-Math.ceil(dx1 / grid.width), Math.ceil(dx2 / grid.width)];
-            rows = [-Math.ceil(dy1 / grid.height), Math.ceil(dy2 / grid.height)];
+            cols = [-Math.round(dx1 / grid.width), Math.round(dx2 / grid.width)];
+            rows = [-Math.round(dy1 / grid.height), Math.round(dy2 / grid.height)];
         } else if (grid['unit'] === 'degree') {
             cols = [-Math.ceil((gridCenter.x - intersection.xmin - delta) / w), Math.ceil((intersection.xmax - gridCenter.x - delta) / w)];
             rows = [-Math.ceil((intersection.ymax - gridCenter.y - delta) / h), Math.ceil((gridCenter.y - intersection.ymin - delta) / h)];
@@ -3594,4 +3594,4 @@ GridLayer.mergeOptions({
 
 export { GridLayer };
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.2, requires maptalks@>=0.36.0.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.3, requires maptalks@>=0.36.0.');
