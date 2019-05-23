@@ -1,5 +1,5 @@
 /*!
- * maptalks.gridlayer v0.6.3
+ * maptalks.gridlayer v0.6.4
  * LICENSE : MIT
  * (c) 2016-2019 maptalks.org
  */
@@ -292,8 +292,8 @@ var GridLayer = function (_maptalks$Layer) {
             });
         } else if (grid['unit'] === 'meter') {
             // distance in geographic meters
-            var sw = map.locate(center, w * cols[0], h * rows[0]),
-                ne = map.locate(center, w * cols[1], h * rows[1]);
+            var sw = map.locate(center, w * cols[0], -h * rows[0]),
+                ne = map.locate(center, w * cols[1], -h * rows[1]);
             return new maptalks.Extent(sw, ne);
         } else if (grid['unit'] === 'degree') {
             var _sw = center.add(w * cols[0], h * rows[0]),
@@ -3600,6 +3600,6 @@ exports.GridLayer = GridLayer;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.3, requires maptalks@>=0.36.0.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.4, requires maptalks@>=0.36.0.');
 
 })));
