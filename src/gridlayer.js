@@ -169,8 +169,8 @@ export class GridLayer extends maptalks.Layer {
             return new maptalks.Extent(xmin, ymin, xmax, ymax).convertTo(c => projection.unproject(c));
         } else if (grid['unit'] === 'meter') {
             // distance in geographic meters
-            const sw = map.locate(center, w * cols[0], h * rows[0]),
-                ne = map.locate(center, w * cols[1], h * rows[1]);
+            const sw = map.locate(center, w * cols[0], -h * rows[0]),
+                ne = map.locate(center, w * cols[1], -h * rows[1]);
             return new maptalks.Extent(sw, ne);
         } else if (grid['unit'] === 'degree') {
             const sw = center.add(w * cols[0], h * rows[0]),
