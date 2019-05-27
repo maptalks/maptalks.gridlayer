@@ -1,5 +1,5 @@
 /*!
- * maptalks.gridlayer v0.6.4
+ * maptalks.gridlayer v0.6.5
  * LICENSE : MIT
  * (c) 2016-2019 maptalks.org
  */
@@ -831,7 +831,7 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
                     return;
                 }
                 _this3._drawDataGrid(gridData, _this3._compiledSymbols[i][index], gridInfo);
-                _this3._drawLabel(gridData, index, gridInfo);
+                _this3._drawLabel(i, gridData, index, gridInfo);
             });
         };
 
@@ -893,22 +893,28 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
         return false;
     };
 
-    GridCanvasRenderer.prototype._drawLabel = function _drawLabel(gridData, index, gridInfo) {
+    GridCanvasRenderer.prototype._drawLabel = function _drawLabel(gridIndex, gridData, index, gridInfo) {
         if (!this._gridSymbolTests) {
-            this._gridSymbolTests = [];
+            this._gridSymbolTests = {};
         }
-        if (maptalks.Util.isNil(this._gridSymbolTests[index])) {
-            this._gridSymbolTests[index] = this._testSymbol(gridData[2]['symbol']);
+        if (!this._gridSymbolTests[gridIndex]) {
+            this._gridSymbolTests[gridIndex] = [];
         }
-        if (!this._gridSymbolTests[index]) {
+        if (maptalks.Util.isNil(this._gridSymbolTests[gridIndex][index])) {
+            this._gridSymbolTests[gridIndex][index] = this._testSymbol(gridData[2]['symbol']);
+        }
+        if (!this._gridSymbolTests[gridIndex][index]) {
             return;
         }
         var symbol = gridData[2]['symbol'];
         var map = this.getMap(),
             extent = map.getExtent();
-        var dataMarkers = this._dataMarkers;
+        if (!this._dataMarkers) {
+            this._dataMarkers = {};
+        }
+        var dataMarkers = this._dataMarkers[gridIndex];
         if (!dataMarkers) {
-            this._dataMarkers = dataMarkers = [];
+            this._dataMarkers[gridIndex] = dataMarkers = [];
         }
         var coordinates = [];
         if (!Array.isArray(gridData[0]) && !Array.isArray(gridData[1])) {
@@ -3294,7 +3300,7 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
                 return 'continue';
             }
             data.forEach(function (gridData, index) {
-                _this5._drawLabel(gridData, index, gridInfo);
+                _this5._drawLabel(i, gridData, index, gridInfo);
             });
         };
 
@@ -3600,6 +3606,6 @@ exports.GridLayer = GridLayer;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.4, requires maptalks@>=0.36.0.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.5, requires maptalks@>=0.36.0.');
 
 })));
