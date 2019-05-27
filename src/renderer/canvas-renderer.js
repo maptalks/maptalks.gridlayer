@@ -330,7 +330,7 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
                     return;
                 }
                 this._drawDataGrid(gridData, this._compiledSymbols[i][index], gridInfo);
-                this._drawLabel(gridData, index, gridInfo);
+                this._drawLabel(i, gridData, index, gridInfo);
             });
         }
 
@@ -383,22 +383,28 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
         return false;
     }
 
-    _drawLabel(gridData, index, gridInfo) {
+    _drawLabel(gridIndex, gridData, index, gridInfo) {
         if (!this._gridSymbolTests) {
-            this._gridSymbolTests = [];
+            this._gridSymbolTests = {};
         }
-        if (maptalks.Util.isNil(this._gridSymbolTests[index])) {
-            this._gridSymbolTests[index] = this._testSymbol(gridData[2]['symbol']);
+        if (!this._gridSymbolTests[gridIndex]) {
+            this._gridSymbolTests[gridIndex] = [];
         }
-        if (!this._gridSymbolTests[index]) {
+        if (maptalks.Util.isNil(this._gridSymbolTests[gridIndex][index])) {
+            this._gridSymbolTests[gridIndex][index] = this._testSymbol(gridData[2]['symbol']);
+        }
+        if (!this._gridSymbolTests[gridIndex][index]) {
             return;
         }
         const symbol = gridData[2]['symbol'];
         const map = this.getMap(),
             extent = map.getExtent();
-        let dataMarkers = this._dataMarkers;
+        if (!this._dataMarkers) {
+            this._dataMarkers = {};
+        }
+        let dataMarkers = this._dataMarkers[gridIndex];
         if (!dataMarkers) {
-            this._dataMarkers = dataMarkers = [];
+            this._dataMarkers[gridIndex] = dataMarkers = [];
         }
         const coordinates = [];
         if (!Array.isArray(gridData[0]) && !Array.isArray(gridData[1])) {

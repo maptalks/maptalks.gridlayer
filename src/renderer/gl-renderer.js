@@ -347,7 +347,7 @@ export default class GridGLRenderer extends GridCanvasRenderer {
                 continue;
             }
             data.forEach((gridData, index) => {
-                this._drawLabel(gridData, index, gridInfo);
+                this._drawLabel(i, gridData, index, gridInfo);
             });
         }
 
