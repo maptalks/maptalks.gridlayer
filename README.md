@@ -52,8 +52,8 @@ var options = {
         lineWidth : 2
     }  
 };
-var gridLayer = new maptalks.GridLayer('grid', grids, options)
-    .addTo(map);
+var gridLayer = new maptalks.GridLayer('grid', grids, options);
+gridLayer.addTo(map);
 </script>
 ```
 ## Supported Browsers
