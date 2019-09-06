@@ -4,8 +4,6 @@ import Color from 'color';
 
 const shaders = {
     'vertexShader' : `
-        precision mediump float;
-
         attribute vec3 a_position;
 
         uniform mat4 u_matrix;
@@ -30,8 +28,6 @@ const shaders = {
 
 const dataGridShaders = {
     'vertexShader' : `
-        precision mediump float;
-
         attribute vec3 a_position;
         attribute vec3 a_color;
         attribute float a_opacity;
@@ -111,7 +107,7 @@ export default class GridGLRenderer extends GridCanvasRenderer {
 
     _updateUniforms() {
         const gl = this.gl;
-        gl.uniformMatrix4fv(this.program['u_matrix'], false, this.copy16(this.getMap().projViewMatrix));
+        gl.uniformMatrix4fv(this.program['u_matrix'], false, this.getMap().projViewMatrix);
     }
 
     _useGridProgram() {
@@ -385,13 +381,14 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         //texts will be still drawn by (this.canvas + this.context)
         this.canvas2 = maptalks.Canvas.createCanvas(this.canvas.width, this.canvas.height);
         const gl = this.gl = this._createGLContext(this.canvas2, this.layer.options['glOptions']);
-        gl.clearColor(0.0, 0.0, 0.0, 0.0);
         gl.getExtension('OES_element_index_uint');
-        gl.disable(gl.DEPTH_TEST);
-        gl.disable(gl.STENCIL_TEST);
-
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        gl.clearColor(0.0, 0.0, 0.0, 0.0);
+        // const map = this.getMap();
+        // gl.viewport(0, 0, map.width, map.height);
+        // gl.disable(gl.DEPTH_TEST);
+        // gl.disable(gl.STENCIL_TEST);
     }
 
     resizeCanvas(canvasSize) {
@@ -416,9 +413,11 @@ export default class GridGLRenderer extends GridCanvasRenderer {
 
     _drawGlCanvas() {
         const ctx = this.context;
+        const map = this.getMap();
+        const dpr = map.getDevicePixelRatio ? map.getDevicePixelRatio() : 2;
         if (maptalks.Browser.retina) {
             ctx.save();
-            ctx.scale(1 / 2, 1 / 2);
+            ctx.scale(1 / dpr, 1 / dpr);
         }
         // draw gl canvas on layer canvas
         ctx.drawImage(this.canvas2, 0, 0);
@@ -544,7 +543,8 @@ export default class GridGLRenderer extends GridCanvasRenderer {
 
     _createGLContext(canvas) {
         const attributes = {
-            'alpha': true
+            'alpha': true,
+            'preserveDrawingBuffer': true
         };
         const names = ['webgl', 'experimental-webgl'];
         let context = null;

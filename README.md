@@ -37,8 +37,8 @@ var grids = [
         //   * meter : meters of geographic distance
         //   * degree : longtitude/latitude degrees
         unit : 'projection',
-        cols      : [1, Infinity],
-        rows      : [2, 5],
+        cols      : [-1, Infinity],
+        rows      : [-2, 5],
         data   : [
             //Each item is an array, arr[0] is cell idx on X axis, arr[1] is cell idx on Y axis, arr[2] is the data object, properties is data, symbol is cell style
             [1, 2, { properties : { foo : 1, foo2 : 'foo' }, symbol : { ... } }],
