@@ -145,6 +145,10 @@ export class GridLayer extends maptalks.Layer {
             h = grid.height,
             cols = grid.cols || [-Infinity, Infinity],
             rows = grid.rows || [-Infinity, Infinity];
+        if (maptalks.Util.isNil(cols[0])) cols[0] = -Infinity;
+        if (maptalks.Util.isNil(cols[1])) cols[1] = Infinity;
+        if (maptalks.Util.isNil(rows[0])) rows[0] = -Infinity;
+        if (maptalks.Util.isNil(rows[1])) rows[1] = Infinity;
         if (grid['unit'] === 'projection') {
             // meters in projected coordinate system
             const projection = this.getGridProjection(),

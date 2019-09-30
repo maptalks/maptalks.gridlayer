@@ -385,6 +385,7 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         gl.clearColor(0.0, 0.0, 0.0, 0.0);
+        gl.viewport(0, 0, this.canvas.width, this.canvas.height);
         // const map = this.getMap();
         // gl.viewport(0, 0, map.width, map.height);
         // gl.disable(gl.DEPTH_TEST);
@@ -417,10 +418,11 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         const dpr = map.getDevicePixelRatio ? map.getDevicePixelRatio() : 2;
         if (maptalks.Browser.retina) {
             ctx.save();
+            // ctx.translate(map.width / 2 / dpr, map.height / 2 / dpr);
             ctx.scale(1 / dpr, 1 / dpr);
         }
         // draw gl canvas on layer canvas
-        ctx.drawImage(this.canvas2, 0, 0);
+        ctx.drawImage(this.canvas2, 0, 0, this.canvas2.width, this.canvas2.height);
         if (maptalks.Browser.retina) {
             ctx.restore();
         }

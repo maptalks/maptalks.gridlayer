@@ -194,6 +194,10 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
             size = getCellPointSize(this.layer, grid),
             width = size[0],
             height = size[1];
+        if (maptalks.Util.isNil(gridX[0])) gridX[0] = -Infinity;
+        if (maptalks.Util.isNil(gridX[1])) gridX[1] = Infinity;
+        if (maptalks.Util.isNil(gridY[0])) gridY[0] = -Infinity;
+        if (maptalks.Util.isNil(gridY[1])) gridY[1] = Infinity;
         const gridExtent = new maptalks.PointExtent(
             center.x + gridX[0] * width,
             center.y + gridY[0] * height,
