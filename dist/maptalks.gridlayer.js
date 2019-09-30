@@ -1,5 +1,5 @@
 /*!
- * maptalks.gridlayer v0.6.5
+ * maptalks.gridlayer v0.6.6
  * LICENSE : MIT
  * (c) 2016-2019 maptalks.org
  */
@@ -266,6 +266,10 @@ var GridLayer = function (_maptalks$Layer) {
             h = grid.height,
             cols = grid.cols || [-Infinity, Infinity],
             rows = grid.rows || [-Infinity, Infinity];
+        if (maptalks.Util.isNil(cols[0])) cols[0] = -Infinity;
+        if (maptalks.Util.isNil(cols[1])) cols[1] = Infinity;
+        if (maptalks.Util.isNil(rows[0])) rows[0] = -Infinity;
+        if (maptalks.Util.isNil(rows[1])) rows[1] = Infinity;
         if (grid['unit'] === 'projection') {
             // meters in projected coordinate system
             var projection$$1 = this.getGridProjection(),
@@ -717,6 +721,10 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
             size = getCellPointSize(this.layer, grid),
             width = size[0],
             height = size[1];
+        if (maptalks.Util.isNil(gridX[0])) gridX[0] = -Infinity;
+        if (maptalks.Util.isNil(gridX[1])) gridX[1] = Infinity;
+        if (maptalks.Util.isNil(gridY[0])) gridY[0] = -Infinity;
+        if (maptalks.Util.isNil(gridY[1])) gridY[1] = Infinity;
         var gridExtent = new maptalks.PointExtent(center.x + gridX[0] * width, center.y + gridY[0] * height, center.x + gridX[1] * width, center.y + gridY[1] * height);
         var intersection = extent.intersection(gridExtent);
         if (!intersection) {
@@ -2965,13 +2973,13 @@ Color.prototype.setChannel = function (space, index, val) {
 var color = Color;
 
 var shaders = {
-    'vertexShader': '\n        precision mediump float;\n\n        attribute vec3 a_position;\n\n        uniform mat4 u_matrix;\n\n        void main() {\n            gl_Position = u_matrix * vec4(a_position, 1.0);\n        }\n    ',
+    'vertexShader': '\n        attribute vec3 a_position;\n\n        uniform mat4 u_matrix;\n\n        void main() {\n            gl_Position = u_matrix * vec4(a_position, 1.0);\n        }\n    ',
     // fragment shader, can be replaced by layer.options.fragmentShader
     'fragmentShader': '\n        precision mediump float;\n\n        uniform float u_opacity;\n\n        uniform vec4 u_color;\n\n        void main() {\n            gl_FragColor = u_color * u_opacity;\n        }\n    '
 };
 
 var dataGridShaders = {
-    'vertexShader': '\n        precision mediump float;\n\n        attribute vec3 a_position;\n        attribute vec3 a_color;\n        attribute float a_opacity;\n\n        varying vec4 v_color;\n\n        uniform mat4 u_matrix;\n\n        void main() {\n            v_color = vec4(a_color / 255.0, 1.0) * (a_opacity / 255.0);\n            gl_Position = u_matrix * vec4(a_position, 1.0);\n        }\n    ',
+    'vertexShader': '\n        attribute vec3 a_position;\n        attribute vec3 a_color;\n        attribute float a_opacity;\n\n        varying vec4 v_color;\n\n        uniform mat4 u_matrix;\n\n        void main() {\n            v_color = vec4(a_color / 255.0, 1.0) * (a_opacity / 255.0);\n            gl_Position = u_matrix * vec4(a_position, 1.0);\n        }\n    ',
     // fragment shader, can be replaced by layer.options.fragmentShader
     'fragmentShader': '\n        precision mediump float;\n\n        varying vec4 v_color;\n\n        void main() {\n            vec4 color = v_color;\n            // color = vec4(0.0, 0.0, 0.0, 1.0);\n            gl_FragColor = color;\n        }\n    '
 };
@@ -3036,7 +3044,7 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
 
     GridGLRenderer.prototype._updateUniforms = function _updateUniforms() {
         var gl = this.gl;
-        gl.uniformMatrix4fv(this.program['u_matrix'], false, this.copy16(this.getMap().projViewMatrix));
+        gl.uniformMatrix4fv(this.program['u_matrix'], false, this.getMap().projViewMatrix);
     };
 
     GridGLRenderer.prototype._useGridProgram = function _useGridProgram() {
@@ -3345,13 +3353,15 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
         //texts will be still drawn by (this.canvas + this.context)
         this.canvas2 = maptalks.Canvas.createCanvas(this.canvas.width, this.canvas.height);
         var gl = this.gl = this._createGLContext(this.canvas2, this.layer.options['glOptions']);
-        gl.clearColor(0.0, 0.0, 0.0, 0.0);
         gl.getExtension('OES_element_index_uint');
-        gl.disable(gl.DEPTH_TEST);
-        gl.disable(gl.STENCIL_TEST);
-
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        gl.clearColor(0.0, 0.0, 0.0, 0.0);
+        gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+        // const map = this.getMap();
+        // gl.viewport(0, 0, map.width, map.height);
+        // gl.disable(gl.DEPTH_TEST);
+        // gl.disable(gl.STENCIL_TEST);
     };
 
     GridGLRenderer.prototype.resizeCanvas = function resizeCanvas(canvasSize) {
@@ -3376,12 +3386,15 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
 
     GridGLRenderer.prototype._drawGlCanvas = function _drawGlCanvas() {
         var ctx = this.context;
+        var map = this.getMap();
+        var dpr = map.getDevicePixelRatio ? map.getDevicePixelRatio() : 2;
         if (maptalks.Browser.retina) {
             ctx.save();
-            ctx.scale(1 / 2, 1 / 2);
+            // ctx.translate(map.width / 2 / dpr, map.height / 2 / dpr);
+            ctx.scale(1 / dpr, 1 / dpr);
         }
         // draw gl canvas on layer canvas
-        ctx.drawImage(this.canvas2, 0, 0);
+        ctx.drawImage(this.canvas2, 0, 0, this.canvas2.width, this.canvas2.height);
         if (maptalks.Browser.retina) {
             ctx.restore();
         }
@@ -3507,7 +3520,8 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
 
     GridGLRenderer.prototype._createGLContext = function _createGLContext(canvas) {
         var attributes = {
-            'alpha': true
+            'alpha': true,
+            'preserveDrawingBuffer': true
         };
         var names = ['webgl', 'experimental-webgl'];
         var context = null;
@@ -3606,6 +3620,6 @@ exports.GridLayer = GridLayer;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.5, requires maptalks@>=0.36.0.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.6, requires maptalks@>=0.36.0.');
 
 })));
