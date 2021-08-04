@@ -1,5 +1,5 @@
 /*!
- * maptalks.gridlayer v0.6.6
+ * maptalks.gridlayer v0.6.7
  * LICENSE : MIT
  * (c) 2016-2021 maptalks.org
  */
@@ -3618,4 +3618,4 @@ GridLayer.mergeOptions({
 
 export { GridLayer };
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.6, requires maptalks@<2.0.0.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.7, requires maptalks@<2.0.0.');
