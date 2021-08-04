@@ -1,10 +1,10 @@
 /*!
  * maptalks.gridlayer v0.6.6
  * LICENSE : MIT
- * (c) 2016-2019 maptalks.org
+ * (c) 2016-2021 maptalks.org
  */
 /*!
- * requires maptalks@>=0.36.0 
+ * requires maptalks@<2.0.0 
  */
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('maptalks')) :
@@ -135,6 +135,10 @@ var options = {
  */
 var GridLayer = function (_maptalks$Layer) {
     inherits(GridLayer, _maptalks$Layer);
+
+    GridLayer.getPainterClass = function getPainterClass() {
+        return maptalks.VectorLayer.getPainterClass();
+    };
 
     function GridLayer(id, grids, options) {
         classCallCheck(this, GridLayer);
@@ -3620,6 +3624,6 @@ exports.GridLayer = GridLayer;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.6, requires maptalks@>=0.36.0.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.6, requires maptalks@<2.0.0.');
 
 })));
