@@ -35,6 +35,10 @@ const options = {
  */
 export class GridLayer extends maptalks.Layer {
 
+    static getPainterClass() {
+        return maptalks.VectorLayer.getPainterClass();
+    }
+
     constructor(id, grids, options) {
         super(id, options);
         if (!grids) {
