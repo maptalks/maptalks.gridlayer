@@ -284,7 +284,11 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
                 gridInfo.center.x + col * gridInfo.width,
                 gridInfo.center.y + row * gridInfo.height
             );
-            return map._pointToPointAtZoom(p, targetZ);
+            if (map._pointToPointAtZoom) {
+                return map._pointToPointAtZoom(p, targetZ);
+            } else {
+                return map._pointToPointAtRes(p, map.getResolution(targetZ));
+            }
         } else if (gridInfo['unit'] === 'meter') {
             const center = gridInfo.center;
             const target = map.locate(center, gridInfo.width * col, -gridInfo.height * row);

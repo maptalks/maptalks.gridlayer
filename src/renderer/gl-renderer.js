@@ -98,11 +98,20 @@ export default class GridGLRenderer extends GridCanvasRenderer {
 
     _meterToPoint(center, altitude) {
         const map = this.getMap();
-        const z = map.getGLZoom();
-        const target = map.locate(center, altitude, 0);
-        const p0 = map.coordToPoint(center, z),
-            p1 = map.coordToPoint(target, z);
-        return Math.abs(p1.x - p0.x) * maptalks.Util.sign(altitude);
+        if (map.getGLZoom) {
+            // compliance for older version of maptalks
+            const z = map.getGLZoom();
+            const target = map.locate(center, altitude, 0);
+            const p0 = map.coordToPoint(center, z),
+                p1 = map.coordToPoint(target, z);
+            return Math.abs(p1.x - p0.x) * maptalks.Util.sign(altitude);
+        } else {
+            const res = map.getGLRes();
+            const target = map.locate(center, altitude, 0);
+            const p0 = map.coordToPointAtRes(center, res),
+                p1 = map.coordToPointAtRes(target, res);
+            return Math.abs(p1.x - p0.x) * maptalks.Util.sign(altitude);
+        }
     }
 
     _updateUniforms() {
@@ -124,6 +133,8 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         }
         this._useGridProgram();
         const colRows = this._preDrawGrid();
+        const map = this.getMap(),
+            altitude = this.layer.options['altitude'];
         for (let i = 0; i < colRows.length; i++) {
             const colRow = colRows[i];
             if (!colRow) {
@@ -133,9 +144,6 @@ export default class GridGLRenderer extends GridCanvasRenderer {
                 rows = colRow['rows'],
                 gridInfo = colRow['gridInfo'];
             let p1, p2;
-            const map = this.getMap(),
-                zoom = map.getGLZoom(),
-                altitude = this.layer.options['altitude'];
             let z = 0;
             if (altitude) {
                 z = this._meterToPoint(map.getCenter(), altitude);
@@ -149,13 +157,13 @@ export default class GridGLRenderer extends GridCanvasRenderer {
             };
             //划线
             for (let i = cols[0]; i <= cols[1]; i++) {
-                p1 = this._getCellNWPoint(i, rows[0], gridInfo, zoom);
-                p2 = this._getCellNWPoint(i, rows[1], gridInfo, zoom);
+                p1 = this._getCellNWPoint(i, rows[0], gridInfo);
+                p2 = this._getCellNWPoint(i, rows[1], gridInfo);
                 [p1.x, p1.y, z, p2.x, p2.y, z].forEach(set);
             }
             for (let i = rows[0]; i <= rows[1]; i++) {
-                p1 = this._getCellNWPoint(cols[0], i, gridInfo, zoom);
-                p2 = this._getCellNWPoint(cols[1], i, gridInfo, zoom);
+                p1 = this._getCellNWPoint(cols[0], i, gridInfo);
+                p2 = this._getCellNWPoint(cols[1], i, gridInfo);
                 [p1.x, p1.y, z, p2.x, p2.y, z].forEach(set);
             }
 
@@ -260,8 +268,7 @@ export default class GridGLRenderer extends GridCanvasRenderer {
     }
 
     _drawDataGrid({ vertices, indices, colors }, c, gridData, symbol, gridInfo) {
-        const map = this.getMap(),
-            zoom = map.getGLZoom();
+        const map = this.getMap();
         const cols = Array.isArray(gridData[0]) ? gridData[0] : [gridData[0], gridData[0]],
             rows = Array.isArray(gridData[1]) ? gridData[1] : [gridData[1], gridData[1]],
             altitude = this.layer.options['altitude'];
@@ -298,8 +305,9 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         let p1, p2, p3, p4;
         for (let i = cols[0]; i <= cols[1]; i++) {
             for (let ii = rows[0]; ii <= rows[1]; ii++) {
-                p1 = this._getCellNWPoint(i, ii, gridInfo, zoom);
-                p3 = this._getCellNWPoint(i + 1, ii + 1, gridInfo, zoom);
+                p1 = this._getCellNWPoint(i, ii, gridInfo);
+                p3 = this._getCellNWPoint(i + 1, ii + 1, gridInfo);
+
                 p2 = p1.add(p3.x - p1.x, 0);
                 // p3 = p1.add(w, h);
                 p4 = p1.add(0, p3.y - p1.y);
@@ -331,6 +339,43 @@ export default class GridGLRenderer extends GridCanvasRenderer {
 
         return c;
     }
+
+
+
+    _getCellNWPoint(col, row, gridInfo) {
+        const map = this.getMap();
+        const res = map.getGLRes ? map.getGLRes() : null;
+        const glZoom = map.getGLZoom ? map.getGLZoom() : null;
+        if (gridInfo['unit'] === 'projection') {
+            const p = new maptalks.Point(
+                gridInfo.center.x + col * gridInfo.width,
+                gridInfo.center.y + row * gridInfo.height
+            );
+            if (res !== null) {
+                return map._pointToPointAtRes(p, res);
+            } else {
+                return map._pointToPointAtZoom(p, glZoom);
+            }
+        } else if (gridInfo['unit'] === 'meter') {
+            const center = gridInfo.center;
+            const target = map.locate(center, gridInfo.width * col, -gridInfo.height * row);
+            if (res !== null) {
+                return map.coordToPointAtRes(target, res);
+            } else {
+                return map.coordToPoint(target, glZoom);
+            }
+        } else if (gridInfo['unit'] === 'degree') {
+            const center = gridInfo.center;
+            const target = center.add(col * gridInfo.width, -row * gridInfo.height);
+            if (res !== null) {
+                return map.coordToPointAtRes(target, res);
+            } else {
+                return map.coordToPoint(target, glZoom);
+            }
+        }
+        return null;
+    }
+
 
 
     _drawAllLabels() {
