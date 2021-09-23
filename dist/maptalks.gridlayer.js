@@ -1,5 +1,5 @@
 /*!
- * maptalks.gridlayer v0.6.7
+ * maptalks.gridlayer v0.6.8
  * LICENSE : MIT
  * (c) 2016-2021 maptalks.org
  */
@@ -791,7 +791,11 @@ var GridCanvasRenderer = function (_maptalks$renderer$Ca) {
         var map = this.getMap();
         if (gridInfo['unit'] === 'projection') {
             var p = new maptalks.Point(gridInfo.center.x + col * gridInfo.width, gridInfo.center.y + row * gridInfo.height);
-            return map._pointToPointAtZoom(p, targetZ);
+            if (map._pointToPointAtZoom) {
+                return map._pointToPointAtZoom(p, targetZ);
+            } else {
+                return map._pointToPointAtRes(p, map.getResolution(targetZ));
+            }
         } else if (gridInfo['unit'] === 'meter') {
             var center = gridInfo.center;
             var target = map.locate(center, gridInfo.width * col, -gridInfo.height * row);
@@ -3039,11 +3043,20 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
 
     GridGLRenderer.prototype._meterToPoint = function _meterToPoint(center, altitude) {
         var map = this.getMap();
-        var z = map.getGLZoom();
-        var target = map.locate(center, altitude, 0);
-        var p0 = map.coordToPoint(center, z),
-            p1 = map.coordToPoint(target, z);
-        return Math.abs(p1.x - p0.x) * maptalks.Util.sign(altitude);
+        if (map.getGLZoom) {
+            // compliance for older version of maptalks
+            var z = map.getGLZoom();
+            var target = map.locate(center, altitude, 0);
+            var p0 = map.coordToPoint(center, z),
+                p1 = map.coordToPoint(target, z);
+            return Math.abs(p1.x - p0.x) * maptalks.Util.sign(altitude);
+        } else {
+            var res = map.getGLRes();
+            var _target = map.locate(center, altitude, 0);
+            var _p = map.coordToPointAtRes(center, res),
+                _p2 = map.coordToPointAtRes(_target, res);
+            return Math.abs(_p2.x - _p.x) * maptalks.Util.sign(altitude);
+        }
     };
 
     GridGLRenderer.prototype._updateUniforms = function _updateUniforms() {
@@ -3067,6 +3080,8 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
         }
         this._useGridProgram();
         var colRows = this._preDrawGrid();
+        var map = this.getMap(),
+            altitude = this.layer.options['altitude'];
 
         var _loop = function _loop(i) {
             var colRow = colRows[i];
@@ -3078,9 +3093,6 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
                 gridInfo = colRow['gridInfo'];
             var p1 = void 0,
                 p2 = void 0;
-            var map = _this3.getMap(),
-                zoom = map.getGLZoom(),
-                altitude = _this3.layer.options['altitude'];
             var z = 0;
             if (altitude) {
                 z = _this3._meterToPoint(map.getCenter(), altitude);
@@ -3094,13 +3106,13 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
             };
             //划线
             for (var _i = cols[0]; _i <= cols[1]; _i++) {
-                p1 = _this3._getCellNWPoint(_i, rows[0], gridInfo, zoom);
-                p2 = _this3._getCellNWPoint(_i, rows[1], gridInfo, zoom);
+                p1 = _this3._getCellNWPoint(_i, rows[0], gridInfo);
+                p2 = _this3._getCellNWPoint(_i, rows[1], gridInfo);
                 [p1.x, p1.y, z, p2.x, p2.y, z].forEach(set$$1);
             }
             for (var _i2 = rows[0]; _i2 <= rows[1]; _i2++) {
-                p1 = _this3._getCellNWPoint(cols[0], _i2, gridInfo, zoom);
-                p2 = _this3._getCellNWPoint(cols[1], _i2, gridInfo, zoom);
+                p1 = _this3._getCellNWPoint(cols[0], _i2, gridInfo);
+                p2 = _this3._getCellNWPoint(cols[1], _i2, gridInfo);
                 [p1.x, p1.y, z, p2.x, p2.y, z].forEach(set$$1);
             }
 
@@ -3224,8 +3236,7 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
             indices = _ref.indices,
             colors = _ref.colors;
 
-        var map = this.getMap(),
-            zoom = map.getGLZoom();
+        var map = this.getMap();
         var cols = Array.isArray(gridData[0]) ? gridData[0] : [gridData[0], gridData[0]],
             rows = Array.isArray(gridData[1]) ? gridData[1] : [gridData[1], gridData[1]],
             altitude = this.layer.options['altitude'];
@@ -3265,8 +3276,9 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
             p4 = void 0;
         for (var i = cols[0]; i <= cols[1]; i++) {
             for (var ii = rows[0]; ii <= rows[1]; ii++) {
-                p1 = this._getCellNWPoint(i, ii, gridInfo, zoom);
-                p3 = this._getCellNWPoint(i + 1, ii + 1, gridInfo, zoom);
+                p1 = this._getCellNWPoint(i, ii, gridInfo);
+                p3 = this._getCellNWPoint(i + 1, ii + 1, gridInfo);
+
                 p2 = p1.add(p3.x - p1.x, 0);
                 // p3 = p1.add(w, h);
                 p4 = p1.add(0, p3.y - p1.y);
@@ -3297,6 +3309,37 @@ var GridGLRenderer = function (_GridCanvasRenderer) {
         }
 
         return c;
+    };
+
+    GridGLRenderer.prototype._getCellNWPoint = function _getCellNWPoint(col, row, gridInfo) {
+        var map = this.getMap();
+        var res = map.getGLRes ? map.getGLRes() : null;
+        var glZoom = map.getGLZoom ? map.getGLZoom() : null;
+        if (gridInfo['unit'] === 'projection') {
+            var p = new maptalks.Point(gridInfo.center.x + col * gridInfo.width, gridInfo.center.y + row * gridInfo.height);
+            if (res !== null) {
+                return map._pointToPointAtRes(p, res);
+            } else {
+                return map._pointToPointAtZoom(p, glZoom);
+            }
+        } else if (gridInfo['unit'] === 'meter') {
+            var center = gridInfo.center;
+            var target = map.locate(center, gridInfo.width * col, -gridInfo.height * row);
+            if (res !== null) {
+                return map.coordToPointAtRes(target, res);
+            } else {
+                return map.coordToPoint(target, glZoom);
+            }
+        } else if (gridInfo['unit'] === 'degree') {
+            var _center = gridInfo.center;
+            var _target2 = _center.add(col * gridInfo.width, -row * gridInfo.height);
+            if (res !== null) {
+                return map.coordToPointAtRes(_target2, res);
+            } else {
+                return map.coordToPoint(_target2, glZoom);
+            }
+        }
+        return null;
     };
 
     GridGLRenderer.prototype._drawAllLabels = function _drawAllLabels() {
@@ -3624,6 +3667,6 @@ exports.GridLayer = GridLayer;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.7, requires maptalks@<2.0.0.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.8, requires maptalks@<2.0.0.');
 
 })));
