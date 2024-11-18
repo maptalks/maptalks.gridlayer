@@ -1,10 +1,7 @@
 /*!
- * maptalks.gridlayer v0.6.8
+ * maptalks.gridlayer v0.6.9
  * LICENSE : MIT
- * (c) 2016-2021 maptalks.org
- */
-/*!
- * requires maptalks@<2.0.0 
+ * (c) 2016-2024 maptalks.org
  */
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('maptalks')) :
@@ -3667,6 +3664,6 @@ exports.GridLayer = GridLayer;
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.8, requires maptalks@<2.0.0.');
+typeof console !== 'undefined' && console.log('maptalks.gridlayer v0.6.9');
 
 })));
