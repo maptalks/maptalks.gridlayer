@@ -36,6 +36,7 @@ var grids = [
         //   * projection : projected coordinate
         //   * meter : meters of geographic distance
         //   * degree : longtitude/latitude degrees
+        altitude : 0,        // altitude of grid in meter
         unit : 'projection',
         cols      : [-1, Infinity],
         rows      : [-2, 5],
@@ -58,7 +59,7 @@ gridLayer.addTo(map);
 ```
 ## Supported Browsers
 
-IE 9-11, Chrome, Firefox, other modern and mobile browsers.
+Chrome, Firefox, other modern and mobile browsers.
 
 ## API Reference
 
@@ -87,6 +88,7 @@ new maptalks.GridLayer(id, data, options)
         //   * projection : projected coordinate
         //   * meter : meters of geographic distance
         //   * degree : longtitude/latitude degrees
+        altitude : 0,        // altitude of grid in meter
         unit   : 'projection',   
         cols      : [1, Infinity],
         rows      : [2, 5],
@@ -209,18 +211,18 @@ We welcome any kind of contributions including issue reportings, pull requests, 
 
 The only source file is ```index.js```.
 
-It is written in ES6, transpiled by [babel](https://babeljs.io/) and tested with [mocha](https://mochajs.org) and [expect.js](https://github.com/Automattic/expect.js).
+It is written in ES6.
 
 ### Scripts
 
 * Install dependencies
 ```shell
-$ npm install
+$ pnpm i
 ```
 
 * Watch source changes and generate runnable bundle repeatedly
 ```shell
-$ gulp watch
+$ npm run dev
 ```
 
 * Tests
@@ -230,12 +232,12 @@ $ npm test
 
 * Watch source changes and run tests repeatedly
 ```shell
-$ gulp tdd
+$ npm run dev
 ```
 
 * Package and generate minified bundles to dist directory
 ```shell
-$ gulp minify
+$ npm run build
 ```
 
 * Lint
