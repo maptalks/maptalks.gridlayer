@@ -105,6 +105,11 @@ export default class GridGLRenderer extends GridCanvasRenderer {
             const p0 = map.coordToPoint(center, z),
                 p1 = map.coordToPoint(target, z);
             return Math.abs(p1.x - p0.x) * maptalks.Util.sign(altitude);
+        } else if (map.altitudeToPoint) {
+            if (!this._meterToGL) {
+                this._meterToGL = map.altitudeToPoint(1, map.getGLRes());
+            }
+            return this._meterToGL * altitude;
         } else {
             const res = map.getGLRes();
             const target = map.locate(center, altitude, 0);
@@ -133,8 +138,8 @@ export default class GridGLRenderer extends GridCanvasRenderer {
         }
         this._useGridProgram();
         const colRows = this._preDrawGrid();
-        const map = this.getMap(),
-            altitude = this.layer.options['altitude'];
+        const map = this.getMap();
+        const layerAltitude = this.layer.options['altitude'] || 0;
         for (let i = 0; i < colRows.length; i++) {
             const colRow = colRows[i];
             if (!colRow) {
@@ -145,6 +150,7 @@ export default class GridGLRenderer extends GridCanvasRenderer {
                 gridInfo = colRow['gridInfo'];
             let p1, p2;
             let z = 0;
+            const altitude = (colRow.altitude || 0) + layerAltitude;
             if (altitude) {
                 z = this._meterToPoint(map.getCenter(), altitude);
             }
@@ -270,8 +276,8 @@ export default class GridGLRenderer extends GridCanvasRenderer {
     _drawDataGrid({ vertices, indices, colors }, c, gridData, symbol, gridInfo) {
         const map = this.getMap();
         const cols = Array.isArray(gridData[0]) ? gridData[0] : [gridData[0], gridData[0]],
-            rows = Array.isArray(gridData[1]) ? gridData[1] : [gridData[1], gridData[1]],
-            altitude = this.layer.options['altitude'];
+            rows = Array.isArray(gridData[1]) ? gridData[1] : [gridData[1], gridData[1]];
+        const altitude = (this.layer.options['altitude'] || 0) + (gridInfo.altitude || 0);
         let z = 0;
         if (altitude) {
             z = this._meterToPoint(map.getCenter(), altitude);

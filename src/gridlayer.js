@@ -16,6 +16,7 @@ const options = {
         width  : 100,        // width of the grid cell
         height : 100,        // height of the grid cell
         unit : 'projection' ,   // 网格的单位: projection指投影坐标, meter指真实距离, degree指经纬度
+        altitude: 0,         // altitude of the grid
         cols      : [1, Infinity],
         rows      : [2, 5],
         data   : [
@@ -250,10 +251,16 @@ export class GridLayer extends maptalks.Layer {
                 sw = map.pointToCoordinate(cnw.add(0, height));
             const w = map.computeLength(nw, ne),
                 h = map.computeLength(nw, sw);
+            if (grid.altitude) {
+                nw.z = grid.altitude;
+            }
             return new maptalks.Rectangle(nw, w, h);
         } else if (grid['unit'] === 'meter') {
             const { width, height } = grid;
             const nw = map.locate(gridCenter, col * width, -row * height);
+            if (grid.altitude) {
+                nw.z = grid.altitude;
+            }
             return new maptalks.Rectangle(nw, width, height);
         } else if (grid['unit'] === 'degree') {
             const { width, height } = grid;
@@ -262,6 +269,9 @@ export class GridLayer extends maptalks.Layer {
             const sw = nw.add(0, -height);
             const w = map.computeLength(nw, ne),
                 h = map.computeLength(nw, sw);
+            if (grid.altitude) {
+                nw.z = grid.altitude;
+            }
             return new maptalks.Rectangle(nw, w, h);
         }
         return null;

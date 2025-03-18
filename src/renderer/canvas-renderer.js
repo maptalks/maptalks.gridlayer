@@ -146,6 +146,7 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
             gridInfos.push({
                 cols : cols,
                 rows : rows,
+                altitude : grid.altitude || 0,
                 gridInfo : gridInfo,
                 p0 : p0
             });
@@ -220,6 +221,7 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
         return {
             cols : cols,
             rows : rows,
+            altitude: grid.altitude || 0,
             width : width,
             height : height,
             center : center,
@@ -271,6 +273,7 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
             cols : cols,
             rows : rows,
             center : gridCenter,
+            altitude: grid.altitude || 0,
             unit : grid.unit,
             width : grid.width,
             height : grid.height
@@ -437,6 +440,12 @@ export default class GridCanvasRenderer extends maptalks.renderer.CanvasRenderer
             return;
         }
         let line = dataMarkers[index];
+        const altitude = gridInfo.altitude + (this.layer.options['altitude'] || 0);
+        if (altitude) {
+            for (let i = 0; i < coordinates.length; i++) {
+                coordinates[i].z = altitude;
+            }
+        }
         if (!line) {
             const lineSymbol = maptalks.Util.extend({}, symbol);
             lineSymbol['markerPlacement'] = 'point';

@@ -34,6 +34,25 @@ describe('GridLayer', function () {
          .addTo(map);
     });
 
+    it('add to map with altitude', function (done) {
+        var layer = new maptalks.GridLayer('g', {
+            projection : true,
+            center : map.getCenter(),
+            width : 100,
+            height : 100,
+            altitude: 100,
+            cols : [-5, 5],
+            rows : [-5, 5]
+        }, {
+            renderer : 'canvas'
+        });
+        layer.on('layerload', function () {
+            expect(layer).to.be.painted();
+            done();
+        })
+         .addTo(map);
+    });
+
     it('add again', function (done) {
         var layer = new maptalks.GridLayer('g', {
             projection : true,

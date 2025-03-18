@@ -2,7 +2,8 @@ const pkg = require('./package.json');
 
 module.exports = {
     basePath : '.',
-    frameworks: ['mocha', 'expect', 'expect-maptalks', 'happen'],
+    frameworks: ['mocha'],
+    plugins: ['karma-mocha', 'karma-mocha-reporter', 'karma-chrome-launcher'],
     files: [
         'node_modules/maptalks/dist/maptalks.js',
         'dist/' + pkg.name + '.js',
@@ -12,15 +13,5 @@ module.exports = {
     },
     browsers: ['Chrome'],
     reporters: ['mocha'],
-    customLaunchers: {
-        IE10: {
-            base: 'IE',
-            'x-ua-compatible': 'IE=EmulateIE10'
-        },
-        IE9: {
-            base: 'IE',
-            'x-ua-compatible': 'IE=EmulateIE9'
-        }
-    },
     singleRun : true
 };
