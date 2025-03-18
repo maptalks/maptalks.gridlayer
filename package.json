@@ -12,7 +12,6 @@
   "module": "dist/maptalks.gridlayer.es.js",
   "jsnext:main": "dist/maptalks.gridlayer.es.js",
   "scripts": {
-    "preversion": "npm test",
     "version": "npm run build && git add -A dist",
     "lint": "eslint src/**/*.js test/**/*.js",
     "test": "karma start --single-run",
