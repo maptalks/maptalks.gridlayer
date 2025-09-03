@@ -20,7 +20,7 @@ const options = {
         cols      : [1, Infinity],
         rows      : [2, 5],
         data   : [
-          //长度为3的数组, arr[0]是x序号, arr[0]为y的序号, arr[2]为对象, properties属性为数据, symbol属性为样式
+          //长度为3的数组, arr[0]是x序号, arr[1]为y的序号, arr[2]为对象, properties属性为数据, symbol属性为样式
           [1, 2, { properties : { foo : 1, foo2 : 'foo' }, symbol : { ... } }],
           //arr[0]为数组, 表示区间内的格子, 此处表示第5行,2到4列的格子
           [[2, 4] , 5, { symbo : {...} }] //[]
